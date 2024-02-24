@@ -13,9 +13,9 @@ protected:
     std::map<int, std::string>  error_page_;
 
 private:
-    std::map<std::string, unsigned short> listen_;
-    std::string server_name_;
-    std::vector<Location> location_block_;
+    std::map<std::string, unsigned short>   listen_;
+    std::string                             server_name_;
+    std::vector<Location>                   location_block_;
 
 public:
     Server();

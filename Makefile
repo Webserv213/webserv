@@ -1,11 +1,11 @@
 SRCS = main.cpp \
-		./srcs/directive/Http.cpp \
-		./srcs/directive/Listen.cpp \
-		./srcs/directive/Location.cpp \
-		./srcs/directive/Server.cpp
+		./srcs/Directive/Http.cpp \
+		./srcs/Directive/Listen.cpp \
+		./srcs/Directive/Location.cpp \
+		./srcs/Directive/Server.cpp
 
 OBJS = $(SRCS:.cpp=.o)
-INCLUDE = -I ./include/directive
+INCLUDE = -I ./include/Directive
 NAME = webserv
 CXX = c++
 MYFLAGS = -std=c++98 -Wall -Wextra -Werror
