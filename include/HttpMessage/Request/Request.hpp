@@ -8,9 +8,9 @@
 class Request
 {
 private:
-    RequestLine start_line;
-    Headers     headers;
-    Body        body;
+    RequestLine start_line_;
+    Headers     headers_;
+    Body        body_;
 
 public:
     Request();

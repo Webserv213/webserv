@@ -4,9 +4,9 @@
 
 struct RequestLine
 {
-    std::string method;
-    std::string request_target;
-    std::string version;
+    std::string method_;
+    std::string request_target_;
+    std::string version_;
 };
 
 #endif
