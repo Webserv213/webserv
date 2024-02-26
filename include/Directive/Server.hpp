@@ -3,6 +3,8 @@
 # include "Location.hpp"
 # include <iostream>
 # include <map>
+# include <string>
+# include <vector>
 
 class Server
 {
@@ -22,6 +24,18 @@ public:
     ~Server();
 
     void setLocation(Location &location);
+
+    //getter
+    std::string getRoot();
+    bool getAutoIndex();
+    unsigned long long getClientMaxBodySize();
+    std::string getErrorPage(int idx);
+    unsigned short getListen(std::string ip);
+    std::string getServerName();
+    Location getLocationBlock(int idx);
+
+    // util
+    int findLocationBlock(std::string url);
 };
 
 #endif

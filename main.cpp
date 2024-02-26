@@ -10,6 +10,8 @@
 #include <map>
 #include <vector>
 
+#include "Server.hpp"
+
 using namespace std;
 
 void exit_with_perror(const string& msg)
@@ -36,7 +38,11 @@ void disconnect_client(int client_fd, map<int, string>& clients)
 
 int main()
 {
-    vector<int> server_sockets;
+    // conf file 파싱
+    // Http http;
+    Server server;  // test
+
+    vector<uintptr_t> server_sockets;
     map<int, string> clients;
     vector<struct kevent> change_list;
     struct kevent event_list[8];
@@ -54,7 +60,7 @@ int main()
         server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
         if (i == 0)
-            server_addr.sin_port = htons(84);   
+            server_addr.sin_port = htons(server.getListen("127.0.0.1"));   
         else
             server_addr.sin_port = htons(85);   
         if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
@@ -104,7 +110,7 @@ int main()
             else if (curr_event->filter == EVFILT_READ)
             {
                 int flag = false;
-                for(int i = 0; i < server_sockets.size(); i++)
+                for(size_t i = 0; i < server_sockets.size(); i++)
                 {
                     if (curr_event->ident == server_sockets[i])
                     {

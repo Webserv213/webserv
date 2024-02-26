@@ -5,12 +5,15 @@
 class Location : public Server
 {
 private:    
-    std::string                 operation_;
-    std::vector<std::string>    path_postfix_;
+    std::string operation_;
+    std::string path_postfix_;
 
 public:
     Location();
     ~Location();
+
+    // getter
+    std::string getPathPostfix();
 };
 
 #endif
