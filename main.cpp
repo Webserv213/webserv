@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include "Request.hpp"
 
 #include "Server.hpp"
 
@@ -39,6 +40,8 @@ int main()
     // conf file 파싱
     // Http http;
     Server server;  // test
+
+    std::vector<Request> requests;
 
     std::vector<uintptr_t> server_sockets;
     std::map<int, std::string> clients;
@@ -134,24 +137,22 @@ int main()
                     char buf[1024];
                     int n = read(curr_event->ident, buf, sizeof(buf));
 
-                    if (n <= 0)
+                    if (n < 0)
                     {
                         if (n < 0)
                             std::cerr << "client read error!" <<std::endl;
                         disconnect_client(curr_event->ident, clients);
                     }
+                    else if (n == 0)
+                    {
+                        // request 요청 파싱
+                        Request req;
+                        req.
+                    }
                     else
                     {
                         buf[n] = '\0';
                         clients[curr_event->ident] += buf;
-
-                        std::cout << "==================\n";
-                        std::cout << buf;
-                        // request 요청 파싱
-
-
-                        // clients[curr_event->ident] += "";  // 결과값
-
                         std::cout << "received data from " << curr_event->ident << ": " << clients[curr_event->ident] << std::endl;
                     }
                 }

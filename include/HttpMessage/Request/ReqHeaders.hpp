@@ -1,8 +1,8 @@
-#ifndef HEADERS_HPP
-# define HEADERS_HPP
+#ifndef REQHEADERS_HPP
+# define REQHEADERS_HPP
 # include <iostream>
 
-class Headers
+class ReqHeaders
 {
 private:
     int         content_length_;
@@ -16,8 +16,8 @@ private:
     std::string user_agent_;
 
 public:
-    Headers();
-    ~Headers();
+    ReqHeaders();
+    ~ReqHeaders();
 
     void    setContentLength(int content_length);
     void    setContentType(std::string content_type);
