@@ -42,12 +42,12 @@ unsigned long long Server::getClientMaxBodySize(void)
 
 std::string Server::getErrorPage(int idx)
 {
-    return (error_page[idx]);
+    return (error_page_[idx]);
 }
 
 unsigned short Server::getListen(std::string ip)
 {
-    return (map[ip]);
+    return (listen_[ip]);
 }
 
 std::string Server::getServerName(void)
@@ -63,11 +63,12 @@ Location Server::getLocationBlock(int idx)
 // util
 int Server::findLocationBlock(std::string url)   // 도메인 뒤에 url로 넘겨주도록
 {
-    for(int i = 0; i < location_block_.size(); i++)
+    for(size_t i = 0; i < location_block_.size(); i++)
     {
         if (location_block_[i].getPathPostfix() == url)
         {
             return (i);
         }
     }
+    return (-1);
 }

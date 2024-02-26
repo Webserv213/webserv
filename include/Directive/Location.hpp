@@ -1,8 +1,8 @@
 #ifndef LOCATION_HPP
 # define LOCATION_HPP
-# include "Server.hpp"
+# include <iostream>
 
-class Location : public Server
+class Location
 {
 private:    
     std::string operation_;
