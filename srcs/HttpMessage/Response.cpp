@@ -10,22 +10,22 @@ Response::~Response(void)
     
 }
 
-ResponseLine Response::getResponseLine(void)
+ResponseLine& Response::getResponseLine(void)
 {
     return (status_line_);
 }
 
-ResHeaders  Response::getResHeaders(void)
+ResHeaders&  Response::getResHeaders(void)
 {
     return (headers_);
 }
 
-std::string Response::getBody(void)
+std::string& Response::getBody(void)
 {
     return(body_);
 }
 
-void    Response::setBody(std::string body)
+void    Response::setBody(std::string& body)
 {
     body_ += body;
 }

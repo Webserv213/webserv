@@ -14,7 +14,7 @@ RequestLine::~RequestLine(void)
 
 void    RequestLine::setMethod(std::string method)
 {
-    method = method;
+    method_ = method;
 }
 
 void    RequestLine::setRequestTarget(std::string request_target)
@@ -25,4 +25,19 @@ void    RequestLine::setRequestTarget(std::string request_target)
 void    RequestLine::setVersion(std::string version)
 {
     version_ = version;
+}
+
+std::string&    RequestLine::getMethod(void)
+{
+    return (method_);
+}
+
+std::string&    RequestLine::getRequestTarget(void)
+{
+    return (request_target_);
+}
+
+std::string&    RequestLine::getVersion(void)
+{
+    return (version_);
 }

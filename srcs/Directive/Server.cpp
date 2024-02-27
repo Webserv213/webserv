@@ -2,7 +2,7 @@
 
 Server::Server(void)
 {
-    root_ = "./var/www";
+    root_ = "./var/www/";
     autoindex_ = true;
     client_max_body_size_ = 10000;
     error_page_[404]="./var/error";

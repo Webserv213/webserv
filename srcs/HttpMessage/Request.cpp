@@ -10,22 +10,22 @@ Request::~Request(void)
     
 }
 
-RequestLine Request::getRequestLine()
+RequestLine& Request::getRequestLine()
 {
     return (start_line_);
 }
 
-ReqHeaders Request::getHeaders()
+ReqHeaders& Request::getHeaders()
 {
     return (headers_);
 }
 
-std::string Request::getBody(void)
+std::string& Request::getBody(void)
 {
     return (body_);
 }
 
-void Request::setBody(std::string body)
+void Request::setBody(std::string& body)
 {
     body_ += body;
 }

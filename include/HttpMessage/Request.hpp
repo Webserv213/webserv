@@ -12,10 +12,10 @@ private:
     std::string body_;
 
 public:
-    RequestLine getRequestLine();
-    ReqHeaders getHeaders();
-    std::string getBody();
-    void setBody(std::string body);
+    RequestLine& getRequestLine();
+    ReqHeaders& getHeaders();
+    std::string& getBody();
+    void setBody(std::string& body);
     Request();
     ~Request();
 };

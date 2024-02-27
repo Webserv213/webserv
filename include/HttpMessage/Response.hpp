@@ -12,10 +12,10 @@ private:
     std::string     body_;
 
 public:
-    ResponseLine    getResponseLine(void);
-    ResHeaders      getResHeaders(void);
-    std::string     getBody(void);
-    void            setBody(std::string body);
+    ResponseLine&   getResponseLine(void);
+    ResHeaders&     getResHeaders(void);
+    std::string&    getBody(void);
+    void            setBody(std::string& body);
     Response();
     ~Response();
 };

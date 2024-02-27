@@ -5,6 +5,8 @@
 struct ResponseLine
 {
 public :
+    ResponseLine();
+    ~ResponseLine();
     void    setVersion(std::string version);
     void    setStatusCode(std::string status_code);
     void    setStatusText(std::string status_text);

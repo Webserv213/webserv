@@ -10,6 +10,7 @@
 #include <map>
 #include <vector>
 #include "Request.hpp"
+#include <sstream>
 
 #include "Server.hpp"
 
@@ -100,6 +101,7 @@ int main()
             /* check error event return */
             if (curr_event->flags & EV_ERROR)
             {
+                std::cout << "aaa\n";
                 // if (curr_event->ident == server_socket)
                 //     exit_with_perror("server socket error");
                 // else
@@ -147,7 +149,48 @@ int main()
                     {
                         // request 요청 파싱
                         Request req;
-                        req.
+                        
+                        //----------parsing----------
+                        std::cout << "000000000" << clients[curr_event->ident] << "0000000000" << std::endl;
+
+                        std::string temp;
+                        std::istringstream streamLine(clients[curr_event->ident]);
+
+                        std::getline(streamLine, temp, ' ');
+                        req.getRequestLine().setMethod(temp);
+                        // std::cout << temp << "\n";
+                        std::getline(streamLine, temp, ' ');
+                        req.getRequestLine().setRequestTarget(temp);
+                        // std::cout << temp << "\n";
+                        std::getline(streamLine, temp, ' ');
+                        req.getRequestLine().setVersion(temp);
+                        // std::cout << temp << "\n";
+                        std::cout << "-----------1----------" << std::endl;
+                        while (1)
+                        {
+                            // std::cout << "-----------2----------" << std::endl;
+                            std::getline(streamLine, temp, ' ');
+                            if (temp.find("Host:") != std::string::npos) {
+                                req.getHeaders().setHost(temp);
+                                break ;
+                            }
+                        }
+                        //----------parsing----------
+
+                        //----------GET 수행----------
+                        std::string url;
+                        std::cout << "-----------" << req.getRequestLine().getMethod() << std::endl;
+                        if (req.getRequestLine().getMethod() == "GET")
+                        {
+                            url = server.getRoot() + req.getRequestLine().getRequestTarget();
+                            std::cout << "-----------------GET-------------------\n";
+                            std::cout << url;
+                            std::cout << "-------------------GET-----------------\n";
+                        }
+                        //----------GET 수행----------
+
+
+
                     }
                     else
                     {
