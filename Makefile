@@ -7,10 +7,11 @@ SRCS = main.cpp \
 		./srcs/HttpMessage/RequestLine.cpp \
 		./srcs/HttpMessage/ResHeaders.cpp \
 		./srcs/HttpMessage/Response.cpp \
-		./srcs/HttpMessage/ResponseLine.cpp
+		./srcs/HttpMessage/ResponseLine.cpp \
+		./srcs/Status.cpp
 
 OBJS = $(SRCS:.cpp=.o)
-INCLUDE = -I ./include/Directive -I ./include/HttpMessage
+INCLUDE = -I ./include/Directive -I ./include/HttpMessage -I ./include
 NAME = webserv
 CXX = c++
 MYFLAGS = -std=c++98 -Wall -Wextra -Werror

@@ -10,12 +10,12 @@ Response::~Response(void)
     
 }
 
-ResponseLine& Response::getResponseLine(void)
+ResponseLine& Response::getStatusLine(void)
 {
     return (status_line_);
 }
 
-ResHeaders&  Response::getResHeaders(void)
+ResHeaders&  Response::getHeaders(void)
 {
     return (headers_);
 }

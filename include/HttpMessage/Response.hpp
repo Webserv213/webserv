@@ -12,8 +12,8 @@ private:
     std::string     body_;
 
 public:
-    ResponseLine&   getResponseLine(void);
-    ResHeaders&     getResHeaders(void);
+    ResponseLine&   getStatusLine(void);
+    ResHeaders&     getHeaders(void);
     std::string&    getBody(void);
     void            setBody(std::string& body);
     Response();
