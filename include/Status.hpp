@@ -7,28 +7,42 @@
 class Status
 {
 private:
-    int open_file_;
-    int read_req_;
-    int write_res_;
-    Request *req_;
-    Response *res_;
-    int root_fd_;
+    int event_read_file_;
+    // int event_read_req_;
+    int event_write_res_;
+    int event_write_pipe_;
+    int event_write_file_;
+    int parent_client_fd_;
+    int fd_error_;
+    int file_offset_;
+    Request req_;
+    Response res_;
 
 public:
     Status();
-    Status(int root_fd);
+    Status(int parent_client_fd);
     ~Status();
-    void setOpenFile(int fd);
-    void setReadReq(int flag);
-    void setWriteRes(int flag);
-    void setRequest(Request* req);
-    void setResponse(Response* res);
-    int getRootFd();
-    int getOpenFile();
-    int getReadReq();
-    int getWriteRes();
-    Request* getRequest();
-    Response* getResponse();
+
+    void setFileOffset(int n);
+    void setEventReadFile(int flag);
+    // void setEventReadReq(int flag);
+    void setEventWriteRes(int flag);
+    void setEventWritePipe(int flag);
+    void setEventWriteFile(int flag);
+    void setParentClientFd(int fd);
+    void setFdError(int flag);
+    void setRequest(Request& req);
+    void setResponse(Response& res);
+
+    int getEventReadFile(void);
+    // int getEventReadReq(void);
+    int getEventWriteRes(void);
+    int getEventWritePipe(void);
+    int getEventWriteFile(void);
+    int getParentClientFd(void);
+    int getFdError(void);
+    Request& getRequest();
+    Response& getResponse();
 };
 
 #endif

@@ -52,3 +52,57 @@ void    ResHeaders::setContentEncoding(std::string content_encoding)
     content_encoding_ = content_encoding;
 }
 
+void    ResHeaders::setContentLength(std::string content_length)
+{
+    content_length_ = content_length;
+}
+
+void    ResHeaders::setKeepAlive(std::string keep_alive)
+{
+    keep_alive_ = keep_alive;
+}
+
+std::string&    ResHeaders::getServer(void)
+{
+    return (server_);
+}
+
+std::string&    ResHeaders::getDate(void)
+{
+    return (date_);
+}
+
+std::string&    ResHeaders::getContentType(void)
+{
+    return (content_type_);
+}
+
+std::string&    ResHeaders::getLastModified(void)
+{
+    return (last_modified_);
+}
+
+std::string&    ResHeaders::getTransferEncoding(void)
+{
+    return (transfer_encoding_);
+}
+
+std::string&    ResHeaders::getConnection(void)
+{
+    return (connection_);
+}
+
+std::string&    ResHeaders::getContentEncoding(void)
+{
+    return (content_encoding_);
+}
+
+std::string&    ResHeaders::getContentLength(void)
+{
+    return (content_length_);
+}
+
+std::string&    ResHeaders::getKeepAlive(void)
+{
+    return (keep_alive_);
+}

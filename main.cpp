@@ -17,6 +17,8 @@
 
 #include "Status.hpp"
 
+#define PORT1 8080
+
 std::map<int, bool> m;
 
 void exit_with_perror(const std::string& msg)
@@ -46,12 +48,12 @@ int main()
     // conf file 파싱
     // Http http;
     Server server;  // test
-    std::vector<Status> a;
+    std::map<int, Status> fd_manager;
+    std::map<int, std::string> clients;
 
     std::vector<Request> requests;
 
     std::vector<uintptr_t> server_sockets;
-    std::map<int, std::string> clients;
     std::vector<struct kevent> change_list;
     struct kevent event_list[8];
 
@@ -69,7 +71,7 @@ int main()
         if (i == 0)
             server_addr.sin_port = htons(server.getListen("127.0.0.1"));   
         else
-            server_addr.sin_port = htons(85);   
+            server_addr.sin_port = htons(PORT1);   
         if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
             exit_with_perror("bind() error\n" + std::string(strerror(errno)));
 
@@ -77,8 +79,7 @@ int main()
             exit_with_perror("listen() error\n" + std::string(strerror(errno)));
         fcntl(server_socket, F_SETFL, O_NONBLOCK);
         server_sockets.push_back(server_socket);
-        Status *status = new Status();  //delete not yet
-        change_events(change_list, server_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, status);
+        change_events(change_list, server_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
         std::cout << "echo server started" << std::endl;
     }
     
@@ -106,6 +107,8 @@ int main()
             /* check error event return */
             if (curr_event->flags & EV_ERROR)
             {
+                std::cout << "error_\n" << std::endl;
+                exit(0);
                 // if (curr_event->ident == server_socket)
                 //     exit_with_perror("server socket error");
                 // else
@@ -129,12 +132,13 @@ int main()
                         fcntl(client_socket, F_SETFL, O_NONBLOCK);
 
                         /* add event for client socket - add read && write event */
-                        Status *status = new Status();  // delete not yet
-                        change_events(change_list, client_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, status);
-                        Status *status2 = new Status();  //delete not yet
-                        change_events(change_list, client_socket, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, status2);
+                        Status st;
+                        fd_manager[client_socket] = st;
+                        change_events(change_list, client_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager[client_socket]);
+                        change_events(change_list, client_socket, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager[client_socket]);
                         clients[client_socket] = "";
                         flag = true;
+                        // std::cout << "serversocket : " << server_sockets[i] << ", client_socket: " << client_socket << std::endl;
                     }
                 }
                 if (flag == true)
@@ -142,9 +146,10 @@ int main()
                 if (clients.find(curr_event->ident)!= clients.end())
                 {
                     /* read data from client */
-                    char buf[1024];
+                    char buf[100000];
                     int n = read(curr_event->ident, buf, sizeof(buf));
-
+                    buf[n] = '\0';
+                    // std::cout << "--" << curr_event->ident << "----" << n << "----------\n" << std::endl;
                     if (n < 0)
                     {
                         if (n < 0)
@@ -153,32 +158,36 @@ int main()
                         }
                         disconnect_client(curr_event->ident, clients);
                     }
-                    else if (n == 0)
+                    // else if (n == 0)
+                    else if (curr_event->data == n)
                     {
-                        if ((static_cast<Status*>(curr_event->udata))->getOpenFile() == -1)
+                        clients[curr_event->ident] += buf;
+                        if (fd_manager[curr_event->ident].getEventReadFile() == -1)
                         {
-                            (static_cast<Status*>(curr_event->udata))->setWriteRes(1);
+                            // std::cout << "0--------requset-----------\n";
+                            // std::cout << clients[curr_event->ident] << std::endl;
+                            // std::cout << "1--------requset-----------\n";
+
+
                             if (clients[curr_event->ident] != "")
-                            {
-                                // request 요청 파싱
-                                Request* req = new Request();
-                                
+                            {   
                                 //----------parsing----------
+                                Request req;
 
                                 std::string temp;
                                 std::istringstream streamLine(clients[curr_event->ident]);
 
                                 std::getline(streamLine, temp, ' ');
-                                req->getRequestLine().setMethod(temp);
+                                req.getRequestLine().setMethod(temp);
                                 std::getline(streamLine, temp, ' ');
-                                req->getRequestLine().setRequestTarget(temp);
+                                req.getRequestLine().setRequestTarget(temp);
                                 std::getline(streamLine, temp);
-                                req->getRequestLine().setVersion(temp);
+                                req.getRequestLine().setVersion(temp);
                                 while (1)
                                 {
                                     std::getline(streamLine, temp, ' ');
                                     if (temp.find("Host:") != std::string::npos) {
-                                        req->getHeaders().setHost(temp);
+                                        req.getHeaders().setHost(temp);
                                         break ;
                                     }
                                 }
@@ -186,64 +195,91 @@ int main()
 
                                 //----------GET 수행----------
                                 std::string url;
-                                if (req->getRequestLine().getMethod() == "GET")
+                                if (req.getRequestLine().getMethod() == "GET")
                                 {
-                                    url = server.getRoot() + req->getRequestLine().getRequestTarget();
-                                    std::cout << "-----------------GET-------------------\n";
-                                    std::cout << url;
+                                    url = server.getRoot() + req.getRequestLine().getRequestTarget();
+                                    // std::cout << "-----------------GET-------------------\n";
+                                    // std::cout << url;
                                 }
                                 url += "/index.html";
                                 int fd;
                                 fd = open (url.c_str(), O_RDONLY);
+                                fcntl(fd, F_SETFL, O_NONBLOCK);
+                                // std::cout << "file_fd : " << fd << std::endl;
+                                if (fd < 0)
+                                {
+                                    std::cout << "fd_error : " << fd << std::endl;
+                                    exit(0);
+                                }
                                 clients[fd] = "";
-                                Status *status = new Status(curr_event->ident);  //delete not yet
-                                status->setOpenFile(fd);
-                                change_events(change_list, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, status);
+                                Status st(curr_event->ident);
+                                st.setEventReadFile(1);
+                                fd_manager[fd] = st;
+                                change_events(change_list, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager[fd]);
                                 //----------GET 수행----------
-                                delete static_cast<Status*>(curr_event->udata);
                                 change_events(change_list, curr_event->ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-
-                                (static_cast<Status*>(curr_event->udata))->setWriteRes(0);
+                                fd_manager[curr_event->ident].setEventWriteRes(-1);
                             }
                         }
                         else   // response 만들기
                         {
-                            char buf2[100000];
-                            int n = read (curr_event->ident, buf2, sizeof(buf2));
-                            buf2[n] = '\0';
+                            // *이 블록의 curr_event는 file의 fd이다.
+                            // curr_event의 부모인 fd의 res구조체에 response할 데이터 세팅하는 코드
 
-                            std::cout << "buf2: " << buf2 << "\n";
+                            // std::cout << "index.html: " << clients[curr_event->ident] << "\n";
 
-                            Response *res = new Response();
                             // status_line
-                            res->getStatusLine().setVersion(static_cast<Status*>(curr_event->udata)->getRequest()->getRequestLine().getVersion());
-                            res->getStatusLine().setStatusCode("200");
-                            res->getStatusLine().setStatusText("OK");
+                            int parent_fd = fd_manager[curr_event->ident].getParentClientFd();
+                            std::string version = fd_manager[parent_fd].getRequest().getRequestLine().getVersion();
+
+                            fd_manager[parent_fd].getResponse().getStatusLine().setVersion(version); // -> ㅈ식의 리스펀스
+                            // 버버전은 d_manager[curr_event->ident].getParentCLientFd
+
+                            fd_manager[parent_fd].getResponse().getStatusLine().setStatusCode("200");
+                            fd_manager[parent_fd].getResponse().getStatusLine().setStatusText("OK");
                 
                             // header
-                            res->getHeaders().setServer("default");
-                            res->getHeaders().setDate("2024-02-27");
-                            res->getHeaders().setContentType("default");
-                            res->getHeaders().setLastModified("default");
-                            res->getHeaders().setTransferEncoding("default");
-                            res->getHeaders().setConnection("default");
-                            res->getHeaders().setContentEncoding("default");
+                            fd_manager[parent_fd].getResponse().getHeaders().setServer("default");
+                            fd_manager[parent_fd].getResponse().getHeaders().setKeepAlive("timeout=100");
+                            fd_manager[parent_fd].getResponse().getHeaders().setDate("Sat, 24 Feb 2024 05:03:45 GMT");
+                            fd_manager[parent_fd].getResponse().getHeaders().setContentType("text/html");
+                            fd_manager[parent_fd].getResponse().getHeaders().setLastModified("default");
+                            fd_manager[parent_fd].getResponse().getHeaders().setTransferEncoding("default");
+                            fd_manager[parent_fd].getResponse().getHeaders().setConnection("keep-alive");
+                            fd_manager[parent_fd].getResponse().getHeaders().setContentEncoding("default");
+                            fd_manager[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(clients[curr_event->ident].size()));
 
                             // body
-                            std::string a(buf2);
-                            res->setBody(a);
+                            std::string file_data(clients[curr_event->ident]);
+                            fd_manager[parent_fd].getResponse().setBody(file_data);
+                            // response ready
 
-                            int fd = static_cast<Status*>(curr_event->udata)->getRootFd();
+                            clients[parent_fd] = "";
+                            // std::cout << "------------------------------------" << fd_manager[parent_fd].getResponse().getHeaders().getContentLength() << "----------------------------" << std::endl;
+                            fd_manager[parent_fd].getResponse().getStatusLine().setVersion("HTTP/1.1");
+                            clients[parent_fd] += (fd_manager[parent_fd].getResponse().getStatusLine().getVersion() + " ");
+                            clients[parent_fd] += (fd_manager[parent_fd].getResponse().getStatusLine().getStatusCode() + " ");
+                            clients[parent_fd] += (fd_manager[parent_fd].getResponse().getStatusLine().getStatusText() + "\n");
+                            clients[parent_fd] += ("Date: " + fd_manager[parent_fd].getResponse().getHeaders().getDate() + "\n");
+                            clients[parent_fd] += ("Sever: " + fd_manager[parent_fd].getResponse().getHeaders().getServer() + "\n");
+                            clients[parent_fd] += ("Content-Type: " + fd_manager[parent_fd].getResponse().getHeaders().getContentType() + "\n");
+                            clients[parent_fd] += ("Last-Modified: " + fd_manager[parent_fd].getResponse().getHeaders().getLastModified() + "\n");
+                            clients[parent_fd] += ("Content-Length: " + fd_manager[parent_fd].getResponse().getHeaders().getContentLength() + "\n");
+                            clients[parent_fd] += ("Connection: " + fd_manager[parent_fd].getResponse().getHeaders().getConnection() + "\n");
+                            clients[parent_fd] += ("Keep-Alive: " + fd_manager[parent_fd].getResponse().getHeaders().getKeepAlive() + "\n");
+                            clients[parent_fd] += ("\n" + fd_manager[parent_fd].getResponse().getBody() + "\n");
+                            fd_manager[parent_fd].setEventWriteRes(1);
+                            close(curr_event->ident);
+                            clients.erase(curr_event->ident);
+                            fd_manager.erase(curr_event->ident);
 
-                            static_cast<Status*>(curr_event->udata)->setResponse(res);
-                            static_cast<Status*>(fd)->setWriteRes(1);    // client 의 fd
-                            static_cast<Status*>(curr_event->udata)->setOpenFile(-1);
+                            // std::cout << "우리가 만든 response: \n" << clients[parent_fd] << std::endl;
                         }
                     }
                     else
                     {
-                        buf[n] = '\0';
                         clients[curr_event->ident] += buf;
+                        // std::cout << "kevent->data: " << curr_event->data << ", bufsize : " << n << std::endl;
                         // std::cout << "received data from " << curr_event->ident << ": " << clients[curr_event->ident] << std::endl;
                     }
                 }
@@ -254,20 +290,20 @@ int main()
                 std::map<int, std::string>::iterator it = clients.find(curr_event->ident);
                 if (it != clients.end())
                 {
-                    if (clients[curr_event->ident] != "" && (static_cast<Status*>(curr_event->udata))->getWriteRes() == 1)
+                    if (clients[curr_event->ident] != "" && fd_manager[curr_event->ident].getEventWriteRes() == 1)
                     {
-                        std::cout << static_cast<Status*>(curr_event->udata)->getResponse()->getBody() << "\n";
-                        int n;
-                        if ((n = write(curr_event->ident, clients[curr_event->ident].c_str(),
-                                        clients[curr_event->ident].size()) == -1))
+                        int n = write(curr_event->ident, clients[curr_event->ident].c_str(), clients[curr_event->ident].size());
+                        if (n == -1)
                         {
                             std::cerr << "client write error!" << std::endl;
                             disconnect_client(curr_event->ident, clients);
-
-                            (static_cast<Status*>(curr_event->udata))->setWriteRes(0);
+                            fd_manager[curr_event->ident].setFdError(1);
                         }
-                        else
+                        else {
                             clients[curr_event->ident].clear();
+                            fd_manager[curr_event->ident].setEventWriteRes(-1);
+                            change_events(change_list, curr_event->ident, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+                        }
                     }
                 }
             }

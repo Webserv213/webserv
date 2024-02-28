@@ -26,3 +26,18 @@ void    ResponseLine::setStatusText(std::string status_text)
 {
     status_text_ = status_text;
 }
+
+std::string& ResponseLine::getVersion(void)
+{
+    return (version_);
+}
+
+std::string& ResponseLine::getStatusCode(void)
+{
+    return (status_code_);
+}
+
+std::string& ResponseLine::getStatusText(void)
+{
+    return (status_text_);
+}

@@ -14,6 +14,7 @@ private:
     std::string host_;
     std::string upgrade_insecure_requests_;
     std::string user_agent_;
+    // std::string keep_alive_;
 
 public:
     ReqHeaders();

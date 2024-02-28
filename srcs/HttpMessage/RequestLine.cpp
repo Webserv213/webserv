@@ -12,17 +12,17 @@ RequestLine::~RequestLine(void)
     
 }
 
-void    RequestLine::setMethod(std::string method)
+void    RequestLine::setMethod(std::string& method)
 {
     method_ = method;
 }
 
-void    RequestLine::setRequestTarget(std::string request_target)
+void    RequestLine::setRequestTarget(std::string& request_target)
 {
     request_target_ = request_target;
 }
 
-void    RequestLine::setVersion(std::string version)
+void    RequestLine::setVersion(std::string& version)
 {
     version_ = version;
 }

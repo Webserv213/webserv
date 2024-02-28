@@ -2,81 +2,123 @@
 
 Status::Status()
 {
-    root_fd_ = -1;
-    open_file_ = -1;
-    read_req_ = -1;
-    write_res_ = -1;
-    req_ = NULL;
-    res_ = NULL;
+    event_read_file_ = -1;
+    // event_read_req_ = -1;
+    event_write_res_ = -1;
+    event_write_pipe_ = -1;
+    event_write_file_ = -1;
+    parent_client_fd_ = -1;
+    fd_error_ = -1;
+    file_offset_ = 0;
 }
 
-Status::Status(int root_fd)
+Status::Status(int parent_client_fd)
 {
-    root_fd_ = root_fd;
-    open_file_ = -1;
-    read_req_ = -1;
-    write_res_ = -1;
-    req_ = NULL;
-    res_ = NULL;
+    event_read_file_ = -1;
+    // event_read_req_ = -1;
+    event_write_res_ = -1;
+    event_write_pipe_ = -1;
+    event_write_file_ = -1;
+    parent_client_fd_ = parent_client_fd;
+    fd_error_ = -1;
 }
 
 Status::~Status()
 {
 
-
 }
 
-void Status::setOpenFile(int fd)
+void Status::setFileOffset(int n)
 {
-    open_file_ = fd;
+    file_offset_ += n;
 }
 
-void Status::setReadReq(int flag)
+void Status::setEventReadFile(int flag)
 {
-    read_req_ = flag;
+    event_read_file_ = flag;
 }
 
-void Status::setWriteRes(int flag)
+// void Status::setEventReadReq(int flag)
+// {
+//     event_read_req_ = flag;
+// }
+
+void Status::setEventWriteRes(int flag)
 {
-    write_res_ = flag;
+    event_write_res_ = flag;
 }
 
-void Status::setRequest(Request* req)
+void Status::setEventWritePipe(int flag)
+{
+    event_write_pipe_ = flag;
+}
+
+void Status::setEventWriteFile(int flag)
+{
+    event_write_file_ = flag;
+}
+
+void Status::setParentClientFd(int fd)
+{
+    parent_client_fd_ = fd;
+}
+
+void Status::setFdError(int flag)
+{
+    fd_error_ = flag;
+}
+
+void Status::setRequest(Request& req)
 {
     req_ = req;
 }
 
-void Status::setResponse(Response* res)
+void Status::setResponse(Response& res)
 {
     res_ = res;
 }
 
-int Status::getRootFd()
+int Status::getEventReadFile(void)
 {
-    return (root_fd_);
+    return (event_read_file_);
 }
 
-int Status::getOpenFile()
+// int Status::getEventReadReq(void)
+// {
+//     return (event_read_req_);
+// }
+
+int Status::getEventWriteRes(void)
 {
-    return (open_file_);
+    return (event_write_res_);
 }
 
-int Status::getReadReq()
+int Status::getEventWritePipe(void)
 {
-    return (read_req_);
+    return (event_write_pipe_);
 }
 
-int Status::getWriteRes()
+int Status::getEventWriteFile(void)
 {
-    return (write_res_);
+    return (event_write_file_);
 }
 
-Request* Status::getRequest()
+int Status::getParentClientFd(void)
+{
+    return (parent_client_fd_);
+}
+
+int Status::getFdError(void)
+{
+    return (fd_error_);
+}
+
+Request& Status::getRequest()
 {
     return (req_);
 }
 
-Response* Status::getResponse()
+Response& Status::getResponse()
 {
     return (res_);
 }
