@@ -17,7 +17,7 @@
 
 #include "Status.hpp"
 
-#define PORT1 8080
+#define PORT1 8082
 
 std::map<int, bool> m;
 
@@ -201,7 +201,10 @@ int main()
                                     // std::cout << "-----------------GET-------------------\n";
                                     // std::cout << url;
                                 }
-                                url += "/index.html";
+                                if (url != "./var/www/favicon.ico")
+                                    url += "/index.html";
+                                // std::cout << "-----------------GET-------------------\n";
+                                // std::cout << url;
                                 int fd;
                                 fd = open (url.c_str(), O_RDONLY);
                                 fcntl(fd, F_SETFL, O_NONBLOCK);

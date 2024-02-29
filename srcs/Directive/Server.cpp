@@ -2,12 +2,12 @@
 
 Server::Server(void)
 {
-    root_ = "./var/www/";
+    root_ = "./var/www";
     autoindex_ = true;
     client_max_body_size_ = 10000;
     error_page_[404]="./var/error";
 
-    listen_["127.0.0.1"] = 8081;
+    listen_["127.0.0.1"] = 8083;
     server_name_="webserv.com";
 
     Location l;
