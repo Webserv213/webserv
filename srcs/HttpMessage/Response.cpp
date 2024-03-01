@@ -2,7 +2,6 @@
 
 Response::Response(void)
 {
-    body_ = "";
 }
 
 Response::~Response(void)
@@ -20,12 +19,13 @@ ResHeaders&  Response::getHeaders(void)
     return (headers_);
 }
 
-std::string& Response::getBody(void)
+std::vector<char>& Response::getBody(void)
 {
     return(body_);
 }
 
 void    Response::setBody(std::string& body)
 {
-    body_ += body;
+    for (size_t i = 0; i < body.size(); i++)
+        body_.push_back(body[i]);
 }
