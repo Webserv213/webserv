@@ -1,6 +1,6 @@
-#include "Status.hpp"
+#include "EventRecorder.hpp"
 
-Status::Status()
+EventRecorder::EventRecorder()
 {
     event_read_file_ = -1;
     // event_read_req_ = -1;
@@ -12,7 +12,7 @@ Status::Status()
     file_offset_ = 0;
 }
 
-Status::Status(int parent_client_fd)
+EventRecorder::EventRecorder(int parent_client_fd)
 {
     event_read_file_ = -1;
     // event_read_req_ = -1;
@@ -23,102 +23,102 @@ Status::Status(int parent_client_fd)
     fd_error_ = -1;
 }
 
-Status::~Status()
+EventRecorder::~EventRecorder()
 {
 
 }
 
-void Status::setFileOffset(int n)
+void EventRecorder::setFileOffset(int n)
 {
     file_offset_ += n;
 }
 
-void Status::setEventReadFile(int flag)
+void EventRecorder::setEventReadFile(int flag)
 {
     event_read_file_ = flag;
 }
 
-// void Status::setEventReadReq(int flag)
+// void EventRecorder::setEventReadReq(int flag)
 // {
 //     event_read_req_ = flag;
 // }
 
-void Status::setEventWriteRes(int flag)
+void EventRecorder::setEventWriteRes(int flag)
 {
     event_write_res_ = flag;
 }
 
-void Status::setEventWritePipe(int flag)
+void EventRecorder::setEventWritePipe(int flag)
 {
     event_write_pipe_ = flag;
 }
 
-void Status::setEventWriteFile(int flag)
+void EventRecorder::setEventWriteFile(int flag)
 {
     event_write_file_ = flag;
 }
 
-void Status::setParentClientFd(int fd)
+void EventRecorder::setParentClientFd(int fd)
 {
     parent_client_fd_ = fd;
 }
 
-void Status::setFdError(int flag)
+void EventRecorder::setFdError(int flag)
 {
     fd_error_ = flag;
 }
 
-void Status::setRequest(Request& req)
+void EventRecorder::setRequest(Request& req)
 {
     req_ = req;
 }
 
-void Status::setResponse(Response& res)
+void EventRecorder::setResponse(Response& res)
 {
     res_ = res;
 }
 
-int Status::getEventReadFile(void)
+int EventRecorder::getEventReadFile(void)
 {
     return (event_read_file_);
 }
 
-// int Status::getEventReadReq(void)
+// int EventRecorder::getEventReadReq(void)
 // {
 //     return (event_read_req_);
 // }
 
-int Status::getEventWriteRes(void)
+int EventRecorder::getEventWriteRes(void)
 {
     return (event_write_res_);
 }
 
-int Status::getEventWritePipe(void)
+int EventRecorder::getEventWritePipe(void)
 {
     return (event_write_pipe_);
 }
 
-int Status::getEventWriteFile(void)
+int EventRecorder::getEventWriteFile(void)
 {
     return (event_write_file_);
 }
 
-int Status::getParentClientFd(void)
+int EventRecorder::getParentClientFd(void)
 {
     return (parent_client_fd_);
 }
 
-int Status::getFdError(void)
+int EventRecorder::getFdError(void)
 {
     return (fd_error_);
 }
 
-Request& Status::getRequest()
+Request& EventRecorder::getRequest()
 {
     return (req_);
 }
 
-Response& Status::getResponse()
+Response& EventRecorder::getResponse()
 {
     return (res_);
 }

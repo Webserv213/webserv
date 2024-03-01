@@ -1,10 +1,10 @@
-#ifndef STATUS_HPP
-# define STATUS_HPP
+#ifndef EVENTRECORDER_HPP
+# define EVENTRECORDER_HPP
 
 # include "Request.hpp"
 # include "Response.hpp"
 
-class Status
+class EventRecorder
 {
 private:
     int event_read_file_;
@@ -19,9 +19,9 @@ private:
     Response res_;
 
 public:
-    Status();
-    Status(int parent_client_fd);
-    ~Status();
+    EventRecorder();
+    EventRecorder(int parent_client_fd);
+    ~EventRecorder();
 
     void setFileOffset(int n);
     void setEventReadFile(int flag);

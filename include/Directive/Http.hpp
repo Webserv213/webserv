@@ -13,6 +13,7 @@ public:
     ~Http();
 
     void setServer(Server &server);
+    std::vector<Server>& getServer();
 };
 
 #endif
