@@ -13,6 +13,15 @@
 # include "EventRecorder.hpp"
 # include "Http.hpp"
 
+# define EVENT_LIST_SIZE 100
+
+enum EventRecorderFlag
+{
+    ISREQUEST,
+    ISFILE,
+    RESPONSE_READY,
+};
+
 class KeventHandler
 {
 private:
@@ -22,15 +31,26 @@ private:
     std::map< int, std::vector<char> >  data_;
     std::vector<struct kevent>          change_list_;
     // event_list의 크기 생각해보기
-    struct kevent event_list_[100];
+    struct kevent                       event_list_[EVENT_LIST_SIZE];
+    int                                 kq_;
 
-    void change_events(std::vector<struct kevent>& change_list, uintptr_t ident, int16_t filter,
-        uint16_t flags, uint32_t fflags, intptr_t data, void *udata);
+    void    disconnectClient(int client_fd, std::map< int, std::vector<char> >& data);
+
+    void    changeEvents(std::vector<struct kevent>& change_list, uintptr_t ident, int16_t filter,
+                        uint16_t flags, uint32_t fflags, intptr_t data, void *udata);
+    void    initKqueue();
+    void    createRequest(struct kevent* curr_event);
+    void    createResponse(struct kevent* curr_event);
+    void    sendResponse(struct kevent* curr_event);
     
 public:
     KeventHandler(Http &http);
     ~KeventHandler();
     void openListenSocket();
+    bool createClientSocket(struct kevent* curr_event);
+    
+
+    
     void tmp();
 };
 
