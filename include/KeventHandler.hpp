@@ -14,6 +14,19 @@
 # include "Http.hpp"
 
 # define EVENT_LIST_SIZE 100
+# define BUFFER_SIZE 100000
+
+enum EventType
+{
+    ERROR,
+    IS_SERVER_SOCKET,
+    READ_ERROR,
+    READ_CONTINUE,
+    READ_FINISH_REQUEST,
+    READ_FINISH_FILE,
+    SEND_RESPONSE,
+    EDIT_FILE,
+};
 
 enum EventRecorderFlag
 {
@@ -48,9 +61,7 @@ public:
     ~KeventHandler();
     void openListenSocket();
     bool createClientSocket(struct kevent* curr_event);
-    
-
-    
+    int  getEventType(struct kevent* curr_event, char *buf, int *n);
     void tmp();
 };
 
