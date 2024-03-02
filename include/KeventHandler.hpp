@@ -10,8 +10,11 @@
 # include <fcntl.h>
 # include <unistd.h>
 # include <sstream>
+# include <ctime>
+
 # include "EventRecorder.hpp"
 # include "Http.hpp"
+# include "utils.hpp"
 
 # define EVENT_LIST_SIZE 100
 # define BUFFER_SIZE 100000
@@ -48,7 +51,6 @@ private:
     int                                 kq_;
 
     void    disconnectClient(int client_fd, std::map< int, std::vector<char> >& data);
-
     void    changeEvents(std::vector<struct kevent>& change_list, uintptr_t ident, int16_t filter,
                         uint16_t flags, uint32_t fflags, intptr_t data, void *udata);
     void    initKqueue();
@@ -62,7 +64,7 @@ public:
     void openListenSocket();
     bool createClientSocket(struct kevent* curr_event);
     int  getEventType(struct kevent* curr_event, char *buf, int *n);
-    void tmp();
+    void serverRun();
 };
 
 # endif

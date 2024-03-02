@@ -9,7 +9,8 @@ SRCS = main.cpp \
 		./srcs/HttpMessage/Response.cpp \
 		./srcs/HttpMessage/ResponseLine.cpp \
 		./srcs/EventRecorder.cpp \
-		./srcs/KeventHandler.cpp
+		./srcs/KeventHandler.cpp \
+		./srcs/utils.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 INCLUDE = -I ./include/Directive -I ./include/HttpMessage -I ./include

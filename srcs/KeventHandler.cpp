@@ -10,29 +10,6 @@ KeventHandler::~KeventHandler()
 
 }
 
-// 
-void    print_vectorChar(std::vector<char>& vector_char)
-{
-    for (size_t i = 0; i < vector_char.size(); i++)
-        std::cout << vector_char[i];
-}
-
-std::vector<char> string_to_vectorChar(std::string& str)
-{
-    std::vector<char> vector_char;
-    for (size_t i = 0; i < str.size(); i++)
-        vector_char.push_back(str[i]);
-    return (vector_char);
-}
-
-std::string vectorChar_to_string(std::vector<char>& vector_char)
-{
-    std::string str;
-    for (size_t i = 0; i < vector_char.size(); i++)
-        str += vector_char[i];
-    return (str);
-}
-
 void    KeventHandler::disconnectClient(int client_fd, std::map< int, std::vector<char> >& data)
 {
     std::cout << "client disconnected: " << client_fd << std::endl;
@@ -124,7 +101,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)
     Request req;
 
     std::string temp;
-    std::istringstream streamLine(vectorChar_to_string(data_[curr_event->ident]));
+    std::istringstream streamLine(charVectorToString(data_[curr_event->ident]));
 
     std::getline(streamLine, temp, ' ');
     req.getRequestLine().setMethod(temp);
@@ -206,7 +183,7 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     else
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(1150));
 
-    std::string file_data(vectorChar_to_string(data_[curr_event->ident]));
+    std::string file_data(charVectorToString(data_[curr_event->ident]));
     fd_manager_[parent_fd].getResponse().setBody(file_data);
 
     std::string res_tmp;
@@ -220,8 +197,8 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     res_tmp += ("Content-Length: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentLength() + "\n");
     res_tmp += ("Connection: " + fd_manager_[parent_fd].getResponse().getHeaders().getConnection() + "\n");
     res_tmp += ("Keep-Alive: " + fd_manager_[parent_fd].getResponse().getHeaders().getKeepAlive() + "\r\n");
-    res_tmp += "\r\n" + vectorChar_to_string(fd_manager_[parent_fd].getResponse().getBody());
-    data_[parent_fd] = string_to_vectorChar(res_tmp);
+    res_tmp += "\r\n" + charVectorToString(fd_manager_[parent_fd].getResponse().getBody());
+    data_[parent_fd] = stringToCharVector(res_tmp);
 
     fd_manager_[parent_fd].setEventWriteRes(1);
     close(curr_event->ident);
@@ -304,7 +281,7 @@ int  KeventHandler::getEventType(struct kevent* curr_event, char *buf, int *n)
     return (-1);
 }
 
-void KeventHandler::tmp()
+void KeventHandler::serverRun()
 {
     int             new_events;
     struct kevent*  curr_event;
