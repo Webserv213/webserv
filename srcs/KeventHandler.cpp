@@ -27,6 +27,14 @@ void KeventHandler::changeEvents(std::vector<struct kevent>& change_list, uintpt
     change_list.push_back(temp_event);
 }
 
+void KeventHandler::setServerSocket(struct sockaddr_in *server_addr, Server server)
+{
+    memset(&(*server_addr), 0, sizeof(*server_addr));
+    (*server_addr).sin_family = AF_INET;
+    (*server_addr).sin_addr.s_addr = htonl(INADDR_ANY);
+    (*server_addr).sin_port = htons(server.getListen("127.0.0.1"));
+}
+
 void KeventHandler::openListenSocket()
 {
     int listen_socket_fd;
@@ -37,10 +45,7 @@ void KeventHandler::openListenSocket()
 
     for(size_t i = 0; i < server.size(); i++)
     {
-        memset(&server_addr, 0, sizeof(server_addr));
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-        server_addr.sin_port = htons(server[i].getListen("127.0.0.1"));
+        setServerSocket(&server_addr, server[i]);
 
         listen_socket_fd = socket(PF_INET, SOCK_STREAM, 0);
         if (listen_socket_fd == -1)
@@ -55,7 +60,7 @@ void KeventHandler::openListenSocket()
 
         server_sockets_.push_back(listen_socket_fd);
         changeEvents(change_list_, listen_socket_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-        
+
         // using debug
         std::cout << "listen_socket_fd : " << listen_socket_fd << ", webserv on" << std::endl;
     }
@@ -76,7 +81,6 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
     {
         if (curr_event->ident == server_sockets_[i])
         {
-            /* accept new client */
             int client_socket = accept(server_sockets_[i], NULL, NULL);
             if (client_socket == -1)
                 throw(std::runtime_error("accept() error\n"));
@@ -88,7 +92,7 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
             fd_manager_[client_socket] = st;
             changeEvents(change_list_, client_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[client_socket]);
             changeEvents(change_list_, client_socket, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[client_socket]);
-            data_[client_socket];
+            fd_content_[client_socket];
             result = true;
         }
     }
@@ -97,11 +101,10 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
 
 void    KeventHandler::createRequest(struct kevent* curr_event)
 {
-    // parsing
     Request req;
 
     std::string temp;
-    std::istringstream streamLine(charVectorToString(data_[curr_event->ident]));
+    std::istringstream streamLine(charVectorToString(fd_content_[curr_event->ident]));
 
     std::getline(streamLine, temp, ' ');
     req.getRequestLine().setMethod(temp);
@@ -124,7 +127,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)
     {
         url = http_.getServer()[0].getRoot() + req.getRequestLine().getRequestTarget();
     }
-    if (url != "./var/www/favicon.ico") 
+    if (url != "./var/www/favicon.ico")
     {
         url += "/index.html";
     }
@@ -137,7 +140,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)
         std::cout << "fd_error : " << fd << std::endl;
         exit(0);
     }
-    data_[fd];
+    fd_content_[fd];
     EventRecorder st(curr_event->ident);
     st.setEventReadFile(1);
     fd_manager_[fd] = st;
@@ -179,11 +182,11 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     fd_manager_[parent_fd].getResponse().getHeaders().setContentEncoding("default");
 
     if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget() != "/favicon.ico")
-        fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(data_[curr_event->ident].size()));
+        fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[curr_event->ident].size()));
     else
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(1150));
 
-    std::string file_data(charVectorToString(data_[curr_event->ident]));
+    std::string file_data(charVectorToString(fd_content_[curr_event->ident]));
     fd_manager_[parent_fd].getResponse().setBody(file_data);
 
     std::string res_tmp;
@@ -198,27 +201,27 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     res_tmp += ("Connection: " + fd_manager_[parent_fd].getResponse().getHeaders().getConnection() + "\n");
     res_tmp += ("Keep-Alive: " + fd_manager_[parent_fd].getResponse().getHeaders().getKeepAlive() + "\r\n");
     res_tmp += "\r\n" + charVectorToString(fd_manager_[parent_fd].getResponse().getBody());
-    data_[parent_fd] = stringToCharVector(res_tmp);
+    fd_content_[parent_fd] = stringToCharVector(res_tmp);
 
     fd_manager_[parent_fd].setEventWriteRes(1);
     close(curr_event->ident);
-    data_.erase(curr_event->ident);
+    fd_content_.erase(curr_event->ident);
     fd_manager_.erase(curr_event->ident);
     changeEvents(change_list_, parent_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[parent_fd]);
 }
 
 void    KeventHandler::sendResponse(struct kevent* curr_event)
 {
-    int n = write(curr_event->ident, &(*data_[curr_event->ident].begin()), data_[curr_event->ident].size());
+    int n = write(curr_event->ident, &(*fd_content_[curr_event->ident].begin()), fd_content_[curr_event->ident].size());
     if (n == -1)
     {
         std::cerr << "client write error!" << std::endl;
-        disconnectClient(curr_event->ident, data_);
+        disconnectClient(curr_event->ident, fd_content_);
         fd_manager_[curr_event->ident].setFdError(1);
     }
     else
     {
-        data_[curr_event->ident].clear();
+        fd_content_[curr_event->ident].clear();
         fd_manager_[curr_event->ident].setEventWriteRes(-1);
         changeEvents(change_list_, curr_event->ident, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         changeEvents(change_list_, curr_event->ident, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[curr_event->ident]);
@@ -227,69 +230,105 @@ void    KeventHandler::sendResponse(struct kevent* curr_event)
     }
 }
 
-int  KeventHandler::getEventType(struct kevent* curr_event, char *buf, int *n)
+bool KeventHandler::isSocket(struct kevent* curr_event)
 {
-    if (curr_event->flags & EV_ERROR)
+     for(size_t i = 0; i < server_sockets_.size(); i++)
     {
-        return (ERROR);
-    }  
-    else if (curr_event->filter == EVFILT_READ)
+        if (curr_event->ident == server_sockets_[i])
+            return (true);
+    }
+    return (false);
+}
+
+int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
+{
+    if (fd_content_.find(curr_event->ident) != fd_content_.end())
     {
+        memset(buf, 0, BUFFER_SIZE);
+        *n = read(curr_event->ident, buf, BUFFER_SIZE);
+        buf[*n] = '\0';
 
-        for(size_t i = 0; i < server_sockets_.size(); i++)
+        if (*n < 0)
+            return (READ_ERROR);
+        else if (curr_event->data == *n)
         {
-            if (curr_event->ident == server_sockets_[i])
-                return (IS_SERVER_SOCKET);
-        }
-
-        if (data_.find(curr_event->ident) != data_.end())
-        {
-            // char buf[100000];
-            memset(buf, 0, BUFFER_SIZE);
-
-            *n = read(curr_event->ident, buf, BUFFER_SIZE);
-            buf[*n] = '\0';
-
-            if (*n < 0) 
-                return (READ_ERROR);
-            else if (curr_event->data == *n)
+            addContent(curr_event, buf, *n);
+            if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
             {
-                data_[curr_event->ident].insert(data_[curr_event->ident].end(), buf, buf + *n);
-                if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
-                {
-                    if (data_[curr_event->ident].size() != 0)
-                        return (READ_FINISH_REQUEST);
-                }
-                else
-                    return (READ_FINISH_FILE);
+                if (fd_content_[curr_event->ident].size() != 0)
+                    return (READ_FINISH_REQUEST);
             }
             else
-                return (READ_CONTINUE);
+                return (READ_FINISH_FILE);
         }
-    }
-    else if (curr_event->filter == EVFILT_WRITE)
-    {
-        std::map<int, std::vector<char> >::iterator it = data_.find(curr_event->ident);
-        if (it != data_.end())
-        {
-            if (data_[curr_event->ident].size() != 0 && fd_manager_[curr_event->ident].getEventWriteRes() == 1)
-                return (SEND_RESPONSE);
-            else
-                return (EDIT_FILE);
-        }
+        else
+            return (READ_CONTINUE);
     }
     return (-1);
 }
 
-void KeventHandler::serverRun()
+int  KeventHandler::writeFdFlag(struct kevent* curr_event)
+{
+    std::map<int, std::vector<char> >::iterator it = fd_content_.find(curr_event->ident);
+    if (it != fd_content_.end())
+    {
+        if (fd_content_[curr_event->ident].size() != 0 && fd_manager_[curr_event->ident].getEventWriteRes() == 1)
+            return (SEND_RESPONSE);
+        else
+            return (EDIT_FILE);
+    }
+    return (-1);
+}
+
+int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
+{
+    if (curr_event->flags & EV_ERROR)
+        return (ERROR);
+    else if (curr_event->filter == EVFILT_READ)
+    {
+        if (isSocket(curr_event))
+            return (IS_SERVER_SOCKET);
+        return (readFdFlag(curr_event, buf, n));
+    }
+    else if (curr_event->filter == EVFILT_WRITE)
+        return (writeFdFlag(curr_event));
+    return (-1);
+}
+
+void KeventHandler::socketError(struct kevent*  curr_event)
+{
+    for(size_t i = 0; i < server_sockets_.size(); i++)
+    {
+        if (curr_event->ident == server_sockets_[i])
+            throw(std::runtime_error("server socket error"));
+        else
+        {
+            throw(std::runtime_error("client socket error"));
+            disconnectClient(curr_event->ident, fd_content_);
+        }
+    }
+}
+
+void KeventHandler::clientReadError(struct kevent* curr_event)
+{
+    std::cerr << "client read error!" <<std::endl;
+    disconnectClient(curr_event->ident, fd_content_);
+}
+
+void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
+{
+    fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
+}
+
+void KeventHandler::runServer(void)
 {
     int             new_events;
+    int             event_type;
     struct kevent*  curr_event;
     char            buf[BUFFER_SIZE];
     int             n;
 
     initKqueue();
-    /* main loop */
     while (1)
     {
         new_events = kevent(kq_, &change_list_[0], change_list_.size(), event_list_, EVENT_LIST_SIZE, NULL);
@@ -300,72 +339,43 @@ void KeventHandler::serverRun()
         for (int i = 0; i < new_events; ++i)
         {
             curr_event = &event_list_[i];
-            int event_type = getEventType(curr_event, buf, &n);
+            event_type = getEventFlag(curr_event, buf, &n);
 
             switch(event_type)
             {
                 case ERROR :
-                {
-                    for(size_t i = 0; i < server_sockets_.size(); i++)
-                    {
-                        if (curr_event->ident == server_sockets_[i])
-                            throw(std::runtime_error("server socket error"));
-                        else
-                        {
-                            std::cerr << "client socket error\n";
-                            disconnectClient(curr_event->ident, data_);
-                            break ;
-                        }
-                    }
+                    socketError(curr_event);
                     break ;
-                }
 
                 case IS_SERVER_SOCKET :
-                {
                     createClientSocket(curr_event);
                     break ;
-                }
 
                 case READ_ERROR :
-                {
-                    std::cerr << "client read error!" <<std::endl;
-                    disconnectClient(curr_event->ident, data_);
+                    clientReadError(curr_event);
                     break ;
-                }
 
                 case READ_FINISH_REQUEST :
-                {
                     createRequest(curr_event);
                     break ;
-                }
 
                 case READ_FINISH_FILE :
-                {
                     createResponse(curr_event);
                     break ;
-                }
 
                 case READ_CONTINUE :
-                {
-                    data_[curr_event->ident].insert(data_[curr_event->ident].end(), buf, buf + n);
+                    addContent(curr_event, buf, n);
                     break ;
-                }
 
                 case SEND_RESPONSE :
-                {
                     sendResponse(curr_event);
                     break ;
-                }
 
                 case EDIT_FILE :
-                {
                     break ;
-                }
 
                 default :
-                {
                     throw(std::runtime_error("event exception error\n"));
-                }
             }
         }
     }

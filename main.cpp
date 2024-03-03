@@ -9,11 +9,11 @@ int main()
     Server server;
     http.setServer(server);
     KeventHandler keventhandler(http);
-    
+
     try
     {
         keventhandler.openListenSocket();
-        keventhandler.serverRun();
+        keventhandler.runServer();
     }
     catch (const std::exception& e)
     {

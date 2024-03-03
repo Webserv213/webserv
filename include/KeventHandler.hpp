@@ -44,7 +44,7 @@ private:
     Http                                http_;
     std::vector<uintptr_t>              server_sockets_;
     std::map<int, EventRecorder>        fd_manager_;
-    std::map< int, std::vector<char> >  data_;
+    std::map< int, std::vector<char> >  fd_content_;
     std::vector<struct kevent>          change_list_;
     // event_list의 크기 생각해보기
     struct kevent                       event_list_[EVENT_LIST_SIZE];
@@ -57,14 +57,21 @@ private:
     void    createRequest(struct kevent* curr_event);
     void    createResponse(struct kevent* curr_event);
     void    sendResponse(struct kevent* curr_event);
-    
+
 public:
     KeventHandler(Http &http);
     ~KeventHandler();
     void openListenSocket();
+    void setServerSocket(struct sockaddr_in *server_addr, Server server);
     bool createClientSocket(struct kevent* curr_event);
-    int  getEventType(struct kevent* curr_event, char *buf, int *n);
-    void serverRun();
+    int  getEventFlag(struct kevent* curr_event, char *buf, int *n);
+    void socketError(struct kevent*  curr_event);
+    void clientReadError(struct kevent* curr_event);
+    void addContent(struct kevent* curr_event, char buf[], int n);
+    bool isSocket(struct kevent* curr_event);
+    int readFdFlag(struct kevent* curr_event, char *buf, int *n);
+    int  writeFdFlag(struct kevent* curr_event);
+    void runServer();
 };
 
 # endif
