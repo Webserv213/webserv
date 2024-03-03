@@ -17,7 +17,6 @@
 # include "utils.hpp"
 
 # define EVENT_LIST_SIZE 100
-# define BUFFER_SIZE 100000
 
 enum EventType
 {

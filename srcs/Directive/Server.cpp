@@ -7,7 +7,7 @@ Server::Server(void)
     client_max_body_size_ = 10000;
     error_page_[404]="./var/error";
 
-    listen_["127.0.0.1"] = 8082;
+    // listen_["127.0.0.1"] = 8082;
     server_name_="webserv.com";
 
     Location l;
@@ -16,7 +16,38 @@ Server::Server(void)
 
 Server::~Server(void)
 {
-    
+
+}
+
+// setter
+void Server::setRoot(std::string &root)
+{
+    root_ = root;
+}
+
+void Server::setAutoIndex(bool flag)
+{
+    autoindex_ = flag;
+}
+
+void Server::setClientMaxBodySize(unsigned long long client_max_body_size)
+{
+    client_max_body_size_ = client_max_body_size;
+}
+
+void Server::setErrorPage(int error_num, std::string &path)
+{
+    error_page_[error_num] = path;
+}
+
+void Server::setListen(std::string &ip, unsigned short port)
+{
+    listen_[ip] = port;
+}
+
+void Server::setServerName(std::string &server_name)
+{
+    server_name_=server_name;
 }
 
 void Server::setLocation(Location &location)

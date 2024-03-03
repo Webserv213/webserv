@@ -1,7 +1,10 @@
 #ifndef HTTP_HPP
 # define HTTP_HPP
-#include "Server.hpp"
+# include "Server.hpp"
 # include <vector>
+
+# define DEFAULT_CONFIG_PATH "./conf/webserv.conf"
+# define BUFFER_SIZE 100000
 
 class Http
 {
@@ -14,6 +17,7 @@ public:
 
     void setServer(Server &server);
     std::vector<Server>& getServer();
+    void setWebserv(int argc, char **argv);
 };
 
 #endif
