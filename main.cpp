@@ -30,14 +30,14 @@
 int main(int argc, char **argv)
 {
     Http http;
-    http.setWebserv(argc, argv);
     // Server server;
     // http.setServer(server);
     // initDummyServer(http);
-    KeventHandler keventhandler(http);
 
     try
     {
+        http.setWebserv(argc, argv);
+        KeventHandler keventhandler(http);
         keventhandler.openListenSocket();
         keventhandler.runServer();
     }
