@@ -32,7 +32,7 @@ void KeventHandler::setServerSocket(struct sockaddr_in *server_addr, Server serv
     memset(&(*server_addr), 0, sizeof(*server_addr));
     (*server_addr).sin_family = AF_INET;
     (*server_addr).sin_addr.s_addr = htonl(INADDR_ANY);
-    (*server_addr).sin_port = htons(server.getListen("127.0.0.1"));
+    (*server_addr).sin_port = htons(server.getListenPort());
 }
 
 void KeventHandler::openListenSocket()
@@ -137,7 +137,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)
     fcntl(fd, F_SETFL, O_NONBLOCK);
     if (fd < 0)
     {
-        std::cout << "fd_error : " << fd << std::endl;
+        std::cout << url + " fd_error : " << fd << std::endl;
         exit(0);
     }
     fd_content_[fd];

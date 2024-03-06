@@ -1,21 +1,25 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 # include "Location.hpp"
+# include "Utils.hpp"
 # include <iostream>
 # include <map>
 # include <string>
 # include <vector>
 # include <sstream>
+# include <fstream>
+
+# define SAME 0
 
 class Server
 {
 private:
+    unsigned short              listen_port_;
+    std::string                 server_name_;
     std::string                 root_;
     bool                        autoindex_;
     unsigned long long          client_max_body_size_;
     std::map<std::string, std::string>  error_page_;
-    unsigned short              listen_port_;
-    std::string                 server_name_;
     std::vector<Location>       location_block_;
 
 public:
@@ -32,7 +36,7 @@ public:
     Location getLocationBlock(int idx);
 
     //setter
-    void setLocationValue(std::string &str, Location &new_location);
+    Location setLocationBlock(std::istringstream& stream_file_contents);
     void setRoot(std::string &root);
     void setAutoIndex(bool flag);
     void setClientMaxBodySize(unsigned long long client_max_body_size);
@@ -40,6 +44,7 @@ public:
     void setListenPort(std::string &listen_port);
     void setServerName(std::string &server_name);
     void setLocation(Location &location);
+    void pushBackLocationBlock(Location &location);
     
     // util
     int findLocationBlock(std::string url);

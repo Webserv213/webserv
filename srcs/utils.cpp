@@ -1,4 +1,8 @@
-#include "utils.hpp"
+# include "Utils.hpp"
+# include <fstream>
+# include <iostream>
+# include <string>
+# include <sstream>
 
 void   printCharVector(std::vector<char>& vector_char)
 {
@@ -21,4 +25,65 @@ std::string charVectorToString(std::vector<char>& vector_char)
     for (size_t i = 0; i < vector_char.size(); i++)
         str += vector_char[i];
     return (str);
+}
+
+std::string getFileContents(std::string input_file_name)
+{
+    std::ifstream input_file_stream(input_file_name.c_str());
+    std::string buff, file_contents;
+
+	if (!input_file_stream.is_open())
+        throw (std::runtime_error("Failed open confuration file"));
+
+    while (std::getline(input_file_stream, buff))
+		file_contents.append(buff);
+    return (file_contents);
+}
+
+std::string strTrim(std::string &str, char c)
+{
+    std::string     res_str;
+    long long       start = 0;
+    long long       end = 0;
+
+    while (start < (long long)str.size())
+    {
+        if (str[start] != c)
+            break ;
+        start++;
+    }
+    end = str.size() - 1;
+    while (end >= 0)
+    {
+        if (str[end] != c)
+            break ;
+        end--;
+    }
+    while (start <= end)
+    {
+        res_str += str[start];
+        start++;
+    }
+    return (res_str);
+}
+
+std::string checkSemicolon(std::string &str)
+{
+    std::string res_str;
+
+    res_str = strTrim(str, ' ');
+    if (*(res_str.rbegin()) != ';')
+        throw (std::runtime_error("Invalid config file contents [semicolon error]"));
+    res_str.pop_back();
+    return (res_str);
+}
+
+void getlineSkipDelemeter(std::istringstream& stream_file_contents, std::string& buff, char c)
+{
+    while (std::getline(stream_file_contents, buff, c))
+    {
+        std::cout << "[" << buff << "]" << std::endl;
+        if (buff != "")
+            break ;
+    }
 }

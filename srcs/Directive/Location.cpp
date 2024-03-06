@@ -3,7 +3,11 @@
 
 Location::Location(void)
 {
-    url_postfix_ = "sooha";
+    url_postfix_ = "/default";
+    root_ = "./var/www";
+    autoindex_ = true;
+    client_max_body_size_ = 10000;
+    error_page_["404"] = "./var/error";
 }
 
 Location::~Location(void)

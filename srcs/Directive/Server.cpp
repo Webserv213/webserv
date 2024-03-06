@@ -2,16 +2,12 @@
 
 Server::Server(void)
 {
+    listen_port_ = 8081;
+    server_name_="webserv.com";
     root_ = "./var/www";
     autoindex_ = true;
     client_max_body_size_ = 10000;
     error_page_["404"] = "./var/error";
-
-    // listen_["127.0.0.1"] = 8082;
-    server_name_="webserv.com";
-
-    Location l;
-    location_block_.push_back(l);
 }
 
 Server::~Server(void)
@@ -19,47 +15,52 @@ Server::~Server(void)
 
 }
 
-void Server::setLocationValue(std::string &str, Location &new_location)
+Location Server::setLocationBlock(std::istringstream& stream_file_contents)
 {
-    std::istringstream  stream_config_contents(str);
-    std::string         get_str;
+    std::string         buff;
+    Location            new_location;
 
-    std::getline(stream_config_contents, get_str, ' ');
-    if (get_str == "location") {
-        std::getline(stream_config_contents, get_str, ' ');
-        new_location.setUrlPostfix(get_str);
-        std::getline(stream_config_contents, get_str, '\n');
-        if (get_str != "{")
-            throw (std::runtime_error("Invalid config file contents [location start bracket]"));
-    }
-    else if (get_str == "root")
-    {
-        std::getline(stream_config_contents, get_str, '\n');
-        new_location.setRoot(get_str);
-    }
-    else if (get_str == "autoindex")
-    {
-        std::getline(stream_config_contents, get_str, '\n');
-        if (get_str == "on")
-            new_location.setAutoIndex(true);
-        else if (get_str == "off")
-            new_location.setAutoIndex(false);
-        else
-            throw (std::runtime_error("Invalid config file contents [Invalid autoindex value]"));
-    }
-    else if (get_str == "error_page")
-    {
-        std::getline(stream_config_contents, get_str, '\n');
-        std::string get_path;
-        std::getline(stream_config_contents, get_path, '\n');
-        new_location.setErrorPage(get_str, get_path);
-    }
+    // 로케이션 블록은 http,서버 블록과 달리 여는 괄호 전에 value 처리해야함.
+    getlineSkipDelemeter(stream_file_contents, buff, ' ');
+    new_location.setUrlPostfix(buff);
 
-    else if (get_str == "client_max_body_size")
+    // 서버 블록 여는 괄호 체크
+    getlineSkipDelemeter(stream_file_contents, buff, ' ');
+    if (buff != "{")
+        throw (std::runtime_error("Invalid config file contents [location's open bracket error]"));
+
+    // 서버 블록 데이터 저장
+    while (std::getline(stream_file_contents, buff, ' '))
     {
-        std::getline(stream_config_contents, get_str, '\n');
-        new_location.setClientMaxBodySize(std::atoll(get_str.c_str())); // c++11 함수 수정해야함.
+        if (buff == "}")
+        {
+            std::cout << "[}] location close" << std::endl;
+            return (new_location);
+        }
+        else if (buff == "root")
+        {
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            new_location.setRoot(buff);
+        }
+        else if (buff == "autoindex")
+        {
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            if (buff == "on")
+                new_location.setAutoIndex(true);
+            else
+                new_location.setAutoIndex(false);    
+        }
+        else if (buff == "client_max_body_size")
+        {
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            new_location.setClientMaxBodySize(std::atoll(buff.c_str()));
+        }
     }
+    throw (std::runtime_error("Invalid config file contents [location's close bracket error]"));
+    return (new_location);
 }
 
 // setter
@@ -91,11 +92,6 @@ void Server::setListenPort(std::string &listen_port)
 void Server::setServerName(std::string &server_name)
 {
     server_name_=server_name;
-}
-
-void Server::setLocation(Location &location)
-{
-    location_block_.push_back(location);
 }
 
 // getter
@@ -145,4 +141,14 @@ int Server::findLocationBlock(std::string url)   // 도메인 뒤에 url로 넘�
         }
     }
     return (-1);
+}
+
+void Server::setLocation(Location &location)
+{
+    location_block_.push_back(location);
+}
+
+void Server::pushBackLocationBlock(Location &location)
+{
+    location_block_.push_back(location);
 }

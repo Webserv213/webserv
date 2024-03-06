@@ -7,8 +7,8 @@
 class Location
 {
 private:    
-    std::string                 url_postfix_;
     std::string                 root_;
+    std::string                 url_postfix_;
     bool                        autoindex_;
     unsigned long long          client_max_body_size_;
     std::map<std::string, std::string>  error_page_;

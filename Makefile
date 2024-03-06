@@ -10,13 +10,13 @@ SRCS = main.cpp \
 		./srcs/HttpMessage/ResponseLine.cpp \
 		./srcs/EventRecorder.cpp \
 		./srcs/KeventHandler.cpp \
-		./srcs/utils.cpp
+		./srcs/Utils.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 INCLUDE = -I ./include/Directive -I ./include/HttpMessage -I ./include
 NAME = webserv
 CXX = c++
-MYFLAGS = -std=c++98 -Wall -Wextra -Werror
+MYFLAGS = -std=c++98 -Wall -Wextra -Werror -g
 CXXFLAGS = $(MYFLAGS) $(INCLUDE)
 
 

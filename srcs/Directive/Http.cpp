@@ -5,10 +5,11 @@
 # include <unistd.h>
 # include <sstream>
 # include <stack>
+# include <fstream>
 
 Http::Http(void)
 {
-
+    flag = -1;
 }
 
 Http::~Http(void)
@@ -16,7 +17,7 @@ Http::~Http(void)
 
 }
 
-void Http::setServer(Server &server)
+void Http::pushBackServerBlock(Server &server)
 {
     server_block_.push_back(server);
 }
@@ -26,109 +27,122 @@ std::vector<Server>& Http::getServer()
     return (server_block_);
 }
 
-void Http::setServerValue(std::string &str, Server &new_server)
+Server Http::setServerBlock(std::istringstream& stream_file_contents)
 {
-    std::istringstream  stream_config_contents(str);
-    std::string         get_str;
+    std::string     buff;
+    Server          new_server;
 
-    std::getline(stream_config_contents, get_str, ' ');
-    if (get_str == "listen") {
-        std::getline(stream_config_contents, get_str, '\n');
-        new_server.setListenPort(get_str);
-    }
-    else if (get_str == "server_name")
+    // 서버 블록 여는 괄호 체크
+    getlineSkipDelemeter(stream_file_contents, buff, ' ');
+    if (buff != "{")
+        throw (std::runtime_error("Invalid config file contents [server's open bracket error]"));
+
+    // 서버 블록 데이터 저장
+    while (std::getline(stream_file_contents, buff, ' '))
     {
-        std::getline(stream_config_contents, get_str, '\n');
-        new_server.setServerName(get_str);
+        std::cout << "<" + buff + ">" << std::endl;
+        if (buff[0] == '}')
+        {
+            if (buff.size() != 1 && buff[1] == '}')
+                flag = HTTPBLOCK_CLOSE_OK;
+            std::cout << "[}] server close" << std::endl;
+            return (new_server);
+        }
+        else if (buff == "listen")
+        {
+            std::cout << "listen\n";
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            std::cout << "--" + buff + "--" << std::endl;
+            new_server.setListenPort(buff);
+        }
+        else if (buff == "server_name")
+        {
+            std::cout << "server_name" << std::endl;
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            new_server.setServerName(buff);
+        }
+        else if (buff == "error_page")
+        {
+            std::cout << "error_page" << std::endl;
+            std::string error_page_path;
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            getlineSkipDelemeter(stream_file_contents, error_page_path, ' ');
+            error_page_path = checkSemicolon(error_page_path);
+            new_server.setErrorPage(buff, error_page_path);
+        }
+        else if (buff == "autoindex")
+        {
+            std::cout << "autoindex" << std::endl;
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            if (buff == "on")
+                new_server.setAutoIndex(true);
+            else
+                new_server.setAutoIndex(false);    
+        }
+        else if (buff == "root")
+        {
+            std::cout << "root" << std::endl;
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            new_server.setRoot(buff);
+        }
+        else if (buff == "location")
+        {
+            std::cout << "location" << std::endl;
+            Location new_location = new_server.setLocationBlock(stream_file_contents);
+            new_server.pushBackLocationBlock(new_location);
+        }
     }
-    else if (get_str == "root")
+    throw (std::runtime_error("Invalid config file contents [server's close bracket error]"));
+    return (new_server);
+}
+
+void Http::setHttpBlock(std::istringstream& stream_file_contents)
+{
+    std::string buff;
+
+    std::getline(stream_file_contents, buff, ' ');
+    if (buff != "http")
+        throw (std::runtime_error("Invalid config file contents [http block name error]"));
+    std::getline(stream_file_contents, buff, ' ');
+    if (buff != "{")
+        throw (std::runtime_error("Invalid config file contents [http's open bracket error]" + buff));
+
+    // server 블록 유효성 확인
+    while (std::getline(stream_file_contents, buff, ' '))
     {
-        std::getline(stream_config_contents, get_str, '\n');
-        new_server.setRoot(get_str);
+        if (buff == "}")
+            return ;
+        else if (buff == "server")
+        {
+            Server new_server = setServerBlock(stream_file_contents);
+            this->pushBackServerBlock(new_server);
+        }
     }
-    else if (get_str == "error_page")
-    {
-        std::getline(stream_config_contents, get_str, '\n');
-        std::string get_path;
-        std::getline(stream_config_contents, get_path, '\n');
-        new_server.setErrorPage(get_str, get_path);
-    }
-    else if (get_str == "autoindex")
-    {
-        std::getline(stream_config_contents, get_str, '\n');
-        if (get_str == "on")
-            new_server.setAutoIndex(true);
-        else if (get_str == "off")
-            new_server.setAutoIndex(false);
-        else
-            throw (std::runtime_error("Invalid config file contents [Invalid autoindex value]"));
-    }
-    else if (get_str == "client_max_body_size")
-    {
-        std::getline(stream_config_contents, get_str, '\n');
-        new_server.setClientMaxBodySize(std::atoll(get_str.c_str())); // c++11 함수 수정해야함.
-    }
+    
+    // http 블록 유효성 확인 : 닫는 괄호 확인
+    if (flag != HTTPBLOCK_CLOSE_OK)
+        throw (std::runtime_error("Invalid config file contents [http's close bracket error]"));
 }
 
 void Http::setWebserv(int argc, char **argv)
 {
-    int fd = -1;
-    char buf[BUFFER_SIZE];
-    int n = 0;
-    std::string config_contents, get_str;
-    std::istringstream stream_config_contents;
-    bool server_end_flag = false;
-    bool location_end_flag = false;
+    std::string file_contents;
+    std::istringstream stream_file_contents;
 
+    // conf file 내용 가져오기
     if (argc > 2)
-        throw (std::runtime_error("argv error"));
+        throw (std::runtime_error("Invalid argc"));
     if (argc == 2)
-        fd = open(argv[1], O_RDONLY);
+        file_contents = getFileContents(argv[1]);
     else
-        fd = open(DEFAULT_CONFIG_PATH, O_RDONLY);
-    if (fd < 0)
-        throw (std::runtime_error("config file open error"));
+        file_contents = getFileContents(DEFAULT_CONF_FILE_PATH);
 
-    while (1)
-    {
-        n = read(fd, buf, sizeof(buf));
-        if (n < 0)
-            throw (std::runtime_error("config file read error"));
-        if (n == 0)
-            break ;
-        buf[n] = '\0';
-        config_contents += buf;
-    }
-    stream_config_contents.str(config_contents);
-    std::getline(stream_config_contents, get_str, ' ');
-    if (get_str != "http")
-        throw (std::runtime_error("Invalid config file contents [http]"));
-    std::getline(stream_config_contents, get_str, '\n');
-    if (get_str != "{")
-        throw (std::runtime_error("Invalid config file contents [http start bracket]"));
-    while (std::getline(stream_config_contents, get_str, ' '))
-    {
-        if (get_str == "server")
-        {
-            int lcoation_idx = 0;
-            std::getline(stream_config_contents, get_str, '\n');
-            if (get_str != "{")
-                throw (std::runtime_error("Invalid config file contents [server start bracket]"));
-            Server new_server;
-            while (std::getline(stream_config_contents, get_str, '\n'))
-            {
-                if (get_str.find("location") != std::string::npos)
-                {
-                    Location location;
-
-                    // setLocationValue(get_str, location);
-                    while (1)
-                    {
-                        // setLocationValue();
-                    }
-
-                }
-            }
-        }
-    }
+    stream_file_contents.str(file_contents);    // string을 stream객체로 변환
+    
+    // setting http 블록 
+    setHttpBlock(stream_file_contents);
 }
