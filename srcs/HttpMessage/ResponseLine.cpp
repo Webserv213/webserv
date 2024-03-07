@@ -2,9 +2,9 @@
 
 ResponseLine::ResponseLine(void)
 {
-    std::string method_ = "GET";
-    std::string request_target_ = "";
-    std::string version_ = "";
+    version_ = "";
+    status_code_ = "";
+    status_text_ = "";
 }
 
 ResponseLine::~ResponseLine(void)

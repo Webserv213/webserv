@@ -3,11 +3,20 @@
 
 Location::Location(void)
 {
-    url_postfix_ = "/default";
-    root_ = "./var/www";
+    url_postfix_ = "";
+    root_ = "./var/www/default";
     autoindex_ = true;
     client_max_body_size_ = 10000;
-    error_page_["404"] = "./var/error";
+    error_page_["404"] = "./var/www/error";
+}
+
+Location::Location(Server parent_server)
+{
+    url_postfix_ = "";
+    root_ = parent_server.getRoot();
+    autoindex_ = parent_server.getAutoIndex();
+    client_max_body_size_ = parent_server.getClientMaxBodySize();
+    error_page_["404"] = parent_server.getErrorPage("404");
 }
 
 Location::~Location(void)

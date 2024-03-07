@@ -11,6 +11,8 @@
 
 # define SAME 0
 
+class Location;
+
 class Server
 {
 private:
@@ -34,6 +36,7 @@ public:
     unsigned short getListenPort();
     std::string getServerName();
     Location getLocationBlock(int idx);
+
 
     //setter
     Location setLocationBlock(std::istringstream& stream_file_contents);

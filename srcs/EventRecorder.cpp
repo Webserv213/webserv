@@ -19,6 +19,7 @@ EventRecorder::EventRecorder(int parent_client_fd)
     event_write_res_ = -1;
     event_write_pipe_ = -1;
     event_write_file_ = -1;
+    file_offset_ = 0;
     parent_client_fd_ = parent_client_fd;
     fd_error_ = -1;
 }

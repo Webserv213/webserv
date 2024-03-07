@@ -53,6 +53,7 @@ private:
     void    changeEvents(std::vector<struct kevent>& change_list, uintptr_t ident, int16_t filter,
                         uint16_t flags, uint32_t fflags, intptr_t data, void *udata);
     void    initKqueue();
+    int     getServerIndex(Request req);
     void    createRequest(struct kevent* curr_event);
     void    createResponse(struct kevent* curr_event);
     void    sendResponse(struct kevent* curr_event);

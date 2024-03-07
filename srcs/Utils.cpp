@@ -82,8 +82,19 @@ void getlineSkipDelemeter(std::istringstream& stream_file_contents, std::string&
 {
     while (std::getline(stream_file_contents, buff, c))
     {
-        std::cout << "[" << buff << "]" << std::endl;
         if (buff != "")
             break ;
     }
+}
+
+std::string mySubstr(std::string::iterator start, std::string::iterator end)
+{
+    std::string result_str;
+
+    for (std::string::iterator it = start; it != end; ++it)
+    {
+        result_str += *it;
+    }
+
+    return result_str;
 }

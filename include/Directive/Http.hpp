@@ -15,7 +15,7 @@ class Http
 {
 private:
     std::vector<Server> server_block_;
-    int                 flag;
+    int                 close_http_bracket;
 
 public:
     Http();

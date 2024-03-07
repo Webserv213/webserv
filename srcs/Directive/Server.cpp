@@ -2,12 +2,12 @@
 
 Server::Server(void)
 {
-    listen_port_ = 8081;
+    listen_port_ = 8080;
     server_name_="webserv.com";
-    root_ = "./var/www";
+    root_ = "./var/www/default";
     autoindex_ = true;
     client_max_body_size_ = 10000;
-    error_page_["404"] = "./var/error";
+    error_page_["404"] = "./var/www/error";
 }
 
 Server::~Server(void)
@@ -18,7 +18,7 @@ Server::~Server(void)
 Location Server::setLocationBlock(std::istringstream& stream_file_contents)
 {
     std::string         buff;
-    Location            new_location;
+    Location            new_location(*this);
 
     // 로케이션 블록은 http,서버 블록과 달리 여는 괄호 전에 value 처리해야함.
     getlineSkipDelemeter(stream_file_contents, buff, ' ');
@@ -34,7 +34,6 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
     {
         if (buff == "}")
         {
-            std::cout << "[}] location close" << std::endl;
             return (new_location);
         }
         else if (buff == "root")

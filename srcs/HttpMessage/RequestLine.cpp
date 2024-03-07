@@ -2,9 +2,9 @@
 
 RequestLine::RequestLine(void)
 {
-    std::string method_ = "GET";
-    std::string request_target_ = "";
-    std::string version_ = "";
+    method_ = "GET";
+    request_target_ = "";
+    version_ = "";
 }
 
 RequestLine::~RequestLine(void)

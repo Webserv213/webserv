@@ -3,6 +3,9 @@
 
 # include <iostream>
 # include <map>
+# include "Server.hpp"
+
+class Server;
 
 class Location
 {
@@ -15,6 +18,7 @@ private:
 
 public:
     Location();
+    Location(Server parent_server);
     ~Location();
 
     // getter

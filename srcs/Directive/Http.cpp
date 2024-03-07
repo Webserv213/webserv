@@ -9,7 +9,7 @@
 
 Http::Http(void)
 {
-    flag = -1;
+    close_http_bracket = -1;
 }
 
 Http::~Http(void)
@@ -40,32 +40,26 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
     // 서버 블록 데이터 저장
     while (std::getline(stream_file_contents, buff, ' '))
     {
-        std::cout << "<" + buff + ">" << std::endl;
         if (buff[0] == '}')
         {
             if (buff.size() != 1 && buff[1] == '}')
-                flag = HTTPBLOCK_CLOSE_OK;
-            std::cout << "[}] server close" << std::endl;
+                close_http_bracket = HTTPBLOCK_CLOSE_OK;
             return (new_server);
         }
         else if (buff == "listen")
         {
-            std::cout << "listen\n";
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
-            std::cout << "--" + buff + "--" << std::endl;
             new_server.setListenPort(buff);
         }
         else if (buff == "server_name")
         {
-            std::cout << "server_name" << std::endl;
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
             new_server.setServerName(buff);
         }
         else if (buff == "error_page")
         {
-            std::cout << "error_page" << std::endl;
             std::string error_page_path;
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             getlineSkipDelemeter(stream_file_contents, error_page_path, ' ');
@@ -74,7 +68,6 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
         }
         else if (buff == "autoindex")
         {
-            std::cout << "autoindex" << std::endl;
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
             if (buff == "on")
@@ -84,14 +77,12 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
         }
         else if (buff == "root")
         {
-            std::cout << "root" << std::endl;
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
             new_server.setRoot(buff);
         }
         else if (buff == "location")
         {
-            std::cout << "location" << std::endl;
             Location new_location = new_server.setLocationBlock(stream_file_contents);
             new_server.pushBackLocationBlock(new_location);
         }
@@ -124,7 +115,7 @@ void Http::setHttpBlock(std::istringstream& stream_file_contents)
     }
     
     // http 블록 유효성 확인 : 닫는 괄호 확인
-    if (flag != HTTPBLOCK_CLOSE_OK)
+    if (close_http_bracket != HTTPBLOCK_CLOSE_OK)
         throw (std::runtime_error("Invalid config file contents [http's close bracket error]"));
 }
 

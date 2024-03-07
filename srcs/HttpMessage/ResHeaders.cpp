@@ -2,13 +2,13 @@
 
 ResHeaders::ResHeaders(void)
 {
-    std::string server_ = "default_server";
-    std::string date_ = "";
-    std::string content_type_= "none";
-    std::string last_modified_= "none";
-    std::string transfer_encoding_= "none";
-    std::string connection_ = "none";
-    std::string content_encoding_ = "none";
+    server_ = "CLK-Webserv";
+    date_ = "";
+    content_type_= "";
+    last_modified_= "";
+    transfer_encoding_= "";
+    connection_ = "";
+    content_encoding_ = "";
 }
 
 ResHeaders::~ResHeaders(void)

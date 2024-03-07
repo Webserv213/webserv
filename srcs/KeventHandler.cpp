@@ -54,7 +54,7 @@ void KeventHandler::openListenSocket()
         if (bind(listen_socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
             throw(std::runtime_error("bind() error\n"));
 
-        if (listen(listen_socket_fd, 5) == -1)
+        if (listen(listen_socket_fd, 50) == -1)
             throw(std::runtime_error("listen() error\n"));
         fcntl(listen_socket_fd, F_SETFL, O_NONBLOCK);
 
@@ -99,6 +99,19 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
     return (result);
 }
 
+int KeventHandler::getServerIndex(Request req)
+{
+    for (size_t i = 0; i < http_.getServer().size(); i++)
+    {
+        if (req.getHeaders().getListenPort() == http_.getServer()[i].getListenPort() &&
+            req.getHeaders().getHost() == http_.getServer()[i].getServerName())
+        {
+            return (i);
+        }
+    }
+    return (0);
+}
+
 void    KeventHandler::createRequest(struct kevent* curr_event)
 {
     Request req;
@@ -112,24 +125,30 @@ void    KeventHandler::createRequest(struct kevent* curr_event)
     req.getRequestLine().setRequestTarget(temp);
     std::getline(streamLine, temp);
     req.getRequestLine().setVersion(temp);
-    while (1)
+
+    while (1)   //Request Header
     {
         std::getline(streamLine, temp, ' ');
         if (temp.find("Host:") != std::string::npos) {
-            req.getHeaders().setHost(temp);
+            req.getHeaders().setFullPath(temp);
             break ;
         }
     }
     fd_manager_[curr_event->ident].setRequest(req);
 
     std::string url;
+    int index = getServerIndex(req);
+
     if (req.getRequestLine().getMethod() == "GET")
     {
-        url = http_.getServer()[0].getRoot() + req.getRequestLine().getRequestTarget();
-    }
-    if (url != "./var/www/favicon.ico")
-    {
-        url += "/index.html";
+        if (req.getRequestLine().getRequestTarget() == "/favicon.ico")
+        {
+            url = "./var/www/favicon.ico";
+        }
+        else
+        {
+            url = http_.getServer()[index].getRoot() + req.getRequestLine().getRequestTarget() + "/index.html";
+        }
     }
 
     int fd;
