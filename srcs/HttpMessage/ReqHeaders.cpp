@@ -10,7 +10,7 @@ ReqHeaders::ReqHeaders(void)
     connection_ = "";
     host_ = "";
     listen_port_ = 0;
-    url_postfix_ = "";
+    // url_postfix_ = "";
     upgrade_insecure_requests_ = "";
     user_agent_ = "";
 }
@@ -51,7 +51,7 @@ void    ReqHeaders::setConnection(std::string& connection)
     this->connection_ = connection;
 }
 
-// sooha.webserv.com:8082  or  sooha.webserv.com:8082/location
+// sooha.webserv.com:8082  or  sooha.webserv.com:8082/location -> 이거 슬래시 안들어옴
 void    ReqHeaders::setFullPath(std::string& host)
 {
     std::string listen_port_str;
@@ -70,11 +70,15 @@ void    ReqHeaders::setFullPath(std::string& host)
                         if (host[i] == '/')
                         {
                             listen_port_ = std::atoi(listen_port_str.c_str());
+
+                            std::string str = "";
+                            i++;
                             while (i < host.size())
                             {
-                                url_postfix_ += host[i];
+                                str += host[i];
                                 i++;
                             }
+                            // url_postfix_.push_back(str);
                             return ;
                         }
                         else
@@ -90,7 +94,8 @@ void    ReqHeaders::setFullPath(std::string& host)
                 {
                     while (i < host.size())
                     {
-                        url_postfix_ += host[i];
+                        // url_postfix_ += host[i];
+                        ;
                         i++;
                     }   
                     return ; 
@@ -157,10 +162,10 @@ unsigned short  ReqHeaders::getListenPort()
     return (listen_port_);
 }
 
-std::string     ReqHeaders::getUrlPostfix()
-{
-    return (url_postfix_);
-}
+// std::string     ReqHeaders::getUrlPostfix()
+// {
+//     return (url_postfix_);
+// }
 
 std::string     ReqHeaders::getUpgradeInsecureRequests()
 {

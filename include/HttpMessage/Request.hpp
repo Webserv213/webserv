@@ -3,6 +3,9 @@
 # include <iostream>
 # include "RequestLine.hpp"
 # include "ReqHeaders.hpp"
+# include "Server.hpp"
+# include <fcntl.h>
+# include <unistd.h>
 
 class Request
 {
@@ -15,6 +18,7 @@ public:
     RequestLine& getRequestLine();
     ReqHeaders& getHeaders();
     std::string& getBody();
+    void methodGetHandler(Server& server);
     void setBody(std::string& body);
     Request();
     ~Request();

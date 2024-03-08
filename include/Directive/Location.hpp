@@ -11,7 +11,8 @@ class Location
 {
 private:    
     std::string                 root_;
-    std::string                 url_postfix_;
+    std::vector<std::string>    url_postfix_;
+    // std::string                 url_postfix_;
     bool                        autoindex_;
     unsigned long long          client_max_body_size_;
     std::map<std::string, std::string>  error_page_;
@@ -22,10 +23,10 @@ public:
     ~Location();
 
     // getter
-    std::string         getUrlPostfix();
-    std::string         getRoot();
-    bool                getAutoIndex();
-    unsigned long long  getClientMaxBodySize();
+    std::vector<std::string>    getUrlPostfix();
+    std::string                 getRoot();
+    bool                        getAutoIndex();
+    unsigned long long          getClientMaxBodySize();
 
     void setRoot(std::string &root);
     void setAutoIndex(bool flag);

@@ -36,6 +36,7 @@ public:
     unsigned short getListenPort();
     std::string getServerName();
     Location getLocationBlock(int idx);
+    std::vector<Location> getLocation();
 
 
     //setter
@@ -50,7 +51,7 @@ public:
     void pushBackLocationBlock(Location &location);
     
     // util
-    int findLocationBlock(std::string url);
+    // int findLocationBlock(std::string url);
 };
 
 #endif

@@ -13,7 +13,6 @@ private:
     std::string     connection_;
     std::string     host_;
     unsigned short  listen_port_;
-    std::string     url_postfix_;
     std::string     upgrade_insecure_requests_;
     std::string     user_agent_;
 

@@ -3,7 +3,6 @@
 
 Location::Location(void)
 {
-    url_postfix_ = "";
     root_ = "./var/www/default";
     autoindex_ = true;
     client_max_body_size_ = 10000;
@@ -12,7 +11,6 @@ Location::Location(void)
 
 Location::Location(Server parent_server)
 {
-    url_postfix_ = "";
     root_ = parent_server.getRoot();
     autoindex_ = parent_server.getAutoIndex();
     client_max_body_size_ = parent_server.getClientMaxBodySize();
@@ -24,7 +22,7 @@ Location::~Location(void)
     
 }
 
-std::string Location::getUrlPostfix()
+std::vector<std::string> Location::getUrlPostfix()
 {
     return (url_postfix_);
 }
@@ -62,7 +60,13 @@ void Location::setClientMaxBodySize(unsigned long long client_max_body_size)
 
 void Location::setUrlPostfix(std::string  url_postfix)
 {
-    url_postfix_ = url_postfix;
+    std::string buf;
+
+    std::istringstream streamLine(url_postfix);
+    while (std::getline(streamLine, buf, '/'))
+    {
+        url_postfix_.push_back(buf);
+    }
 }
 
 void Location::setErrorPage(std::string error_code, std::string &path)

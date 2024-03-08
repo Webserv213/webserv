@@ -3,7 +3,6 @@
 RequestLine::RequestLine(void)
 {
     method_ = "GET";
-    request_target_ = "";
     version_ = "";
 }
 
@@ -19,7 +18,11 @@ void    RequestLine::setMethod(std::string& method)
 
 void    RequestLine::setRequestTarget(std::string& request_target)
 {
-    request_target_ = request_target;
+    std::string buf;
+    std::istringstream streamLine(request_target);
+
+    while (std::getline(streamLine, buf, '/'))
+        request_target_.push_back(buf);
 }
 
 void    RequestLine::setVersion(std::string& version)
@@ -32,7 +35,7 @@ std::string&    RequestLine::getMethod(void)
     return (method_);
 }
 
-std::string&    RequestLine::getRequestTarget(void)
+std::vector<std::string>    RequestLine::getRequestTarget(void)
 {
     return (request_target_);
 }

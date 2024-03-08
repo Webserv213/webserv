@@ -17,12 +17,12 @@ void    checkRequest(Request &req)
     std::cout << "Listen socket: " << req.getHeaders().getListenPort() << "\n";
 }
 
-void    KeventHandler::disconnectClient(int client_fd, std::map< int, std::vector<char> >& data)
+void    KeventHandler::disconnectClient(int client_fd)
 {
     std::cout << "client disconnected: " << client_fd << std::endl;
     close(client_fd);
-    data.erase(client_fd);
     fd_manager_.erase(client_fd);
+    fd_content_.erase(client_fd);
 }
 
 void KeventHandler::changeEvents(std::vector<struct kevent>& change_list, uintptr_t ident, int16_t filter,
@@ -123,27 +123,144 @@ int KeventHandler::getServerIndex(Request req)
     return (0);
 }
 
+int KeventHandler::compareLocation(std::vector<std::string> t, std::vector<std::string> loc)
+{
+    size_t i = 0;
+
+    while (i < t.size())
+    {
+        if (i > loc.size() - 1)
+            return (i);
+
+        if (t[i] != loc[i])
+            return (i);
+        i++;
+    }
+    return (i);
+}
+
+int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Server &server)
+{
+    // target 
+    // 슬래시 기준으로 잘라서 vector에 삽입
+
+    // post_fix 슬래시 시준으로 잘라서 vector에 삽입
+    // target하고 postfix 벡터 비교하면서 하나라고 다른게 있으면 바로 끝 아니면 인덱스 증가 (제일 큰 인덱스로 계속 갱신)
+
+    int index = 0;
+    size_t size, size2;
+    std::string url;
+
+    // 예외! size와 target.size() 무조건 걔의 인덱스 반환
+    size = compareLocation(request_target, server.getLocation()[0].getUrlPostfix());           // 초기값
+    for(size_t i = 1; i < server.getLocation().size(); i++)
+    {
+        size2 = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
+        if (size2 == server.getLocation()[i].getUrlPostfix().size())
+            return (i);
+        if (size < size2)
+        {
+            size = size2;
+            index = i;
+        }
+    }
+    return (index);
+}
+
+void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)
+{
+    std::string file_path;
+    if (req.getRequestLine().getRequestTarget()[0] == "/favicon.ico")
+    {
+        file_path = "./var/www/favicon.ico";
+    }
+    else
+    {
+        int loc_idx;
+    
+        loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server);
+        // file_path = server.getRoot() + req.getRequestLine().getRequestTarget() + "/index.html";
+        file_path = server.getLocationBlock(loc_idx).getRoot();
+        for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
+            file_path += req.getRequestLine().getRequestTarget()[i];
+        file_path += "/index.html";
+        // file_path = server.getLocationBlock(loc_idx).getRoot() + req.getRequestLine().getRequestTarget() + "/index.html";
+    }
+
+    // location
+    // 1. target 확인해서 locaion 길이 제일 맞는거
+    // 2. 디렉토리 -> autoindex on -> autoindex
+    // 3. 디렉토리 -> autoindex off -> index.html
+    // 4. 아니면 404
+
+
+    int fd;
+
+    fd = open (file_path.c_str(), O_RDONLY);
+    fcntl(fd, F_SETFL, O_NONBLOCK);
+    if (fd < 0)
+    {
+        std::cout << file_path + " fd_error : " << fd << std::endl;
+        exit(0);
+    }
+    fd_content_[fd];
+    EventRecorder event_recorder(curr_event_fd);
+    event_recorder.setEventReadFile(1);
+    fd_manager_[fd] = event_recorder;
+    changeEvents(change_list_, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
+    changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+    fd_manager_[curr_event_fd].setEventWriteRes(-1);
+}
+
 void    KeventHandler::createRequest(struct kevent* curr_event)
 {
     Request req;
 
-    std::string temp;
+    std::string buf;
     std::istringstream streamLine(charVectorToString(fd_content_[curr_event->ident]));
 
-    std::getline(streamLine, temp, ' ');
-    req.getRequestLine().setMethod(temp);
-    std::getline(streamLine, temp, ' ');
-    req.getRequestLine().setRequestTarget(temp);
-    std::getline(streamLine, temp);
-    req.getRequestLine().setVersion(temp);
+    std::getline(streamLine, buf, ' ');
+    req.getRequestLine().setMethod(buf);
+    std::getline(streamLine, buf, ' ');
+    req.getRequestLine().setRequestTarget(buf);
+    std::getline(streamLine, buf);
+    req.getRequestLine().setVersion(buf);
 
-    while (1)   //Request Header
+    while (std::getline(streamLine, buf, ' '))   //Request Header
     {
-        std::getline(streamLine, temp, ' ');
-        if (temp.find("Host:") != std::string::npos) {
-            std::getline(streamLine, temp, ' ');
-            req.getHeaders().setFullPath(temp);
-            break ;
+        if (buf == "Host:") {
+            std::getline(streamLine, buf);
+            req.getHeaders().setFullPath(buf);
+        }
+        else if (buf == "Accept:")
+        {
+            std::getline(streamLine, buf);
+            req.getHeaders().setAccept(buf);
+        }
+        else if (buf == "Accept-Encoding:")
+        {
+            std::getline(streamLine, buf);
+            req.getHeaders().setAcceptEncoding(buf);
+        }
+        else if (buf == "Accept-Language:")
+        {
+            std::getline(streamLine, buf);
+            req.getHeaders().setAcceptLanguage(buf);
+        }
+        else if (buf == "Connection:")
+        {
+            std::getline(streamLine, buf);
+            req.getHeaders().setConnection(buf);
+        }
+        else if (buf == "Upgrade-Insecure-Requests:")
+        {
+            std::getline(streamLine, buf);
+            req.getHeaders().setUpgradeInsecureRequests(buf);
+        }
+        else if (buf == "User-Agent:")
+        {
+            std::getline(streamLine, buf);
+            req.getHeaders().setUserAgent(buf);
         }
     }
     fd_manager_[curr_event->ident].setRequest(req);
@@ -153,31 +270,12 @@ void    KeventHandler::createRequest(struct kevent* curr_event)
 
     if (req.getRequestLine().getMethod() == "GET")
     {
-        if (req.getRequestLine().getRequestTarget() == "/favicon.ico")
-        {
-            url = "./var/www/favicon.ico";
-        }
-        else
-        {
-            url = http_.getServer()[index].getRoot() + req.getRequestLine().getRequestTarget() + "/index.html";
-        }
+        methodGetHandler(http_.getServer()[index], req, curr_event->ident);
     }
-
-    int fd;
-    fd = open (url.c_str(), O_RDONLY);
-    fcntl(fd, F_SETFL, O_NONBLOCK);
-    if (fd < 0)
+    else if (req.getRequestLine().getMethod() == "POST")
     {
-        std::cout << url + " fd_error : " << fd << std::endl;
-        exit(0);
+        ;
     }
-    fd_content_[fd];
-    EventRecorder st(curr_event->ident);
-    st.setEventReadFile(1);
-    fd_manager_[fd] = st;
-    changeEvents(change_list_, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
-    changeEvents(change_list_, curr_event->ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-    fd_manager_[curr_event->ident].setEventWriteRes(-1);
 }
 
 void KeventHandler::createResponse(struct kevent* curr_event)
@@ -202,7 +300,7 @@ void KeventHandler::createResponse(struct kevent* curr_event)
 
     fd_manager_[parent_fd].getResponse().getHeaders().setDate(buffer);
 
-    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget() != "/favicon.ico")
+    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] != "/favicon.ico")
         fd_manager_[parent_fd].getResponse().getHeaders().setContentType("text/html");
     else
         fd_manager_[parent_fd].getResponse().getHeaders().setContentType("image/x-icon");
@@ -212,7 +310,7 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     fd_manager_[parent_fd].getResponse().getHeaders().setConnection("keep-alive");
     fd_manager_[parent_fd].getResponse().getHeaders().setContentEncoding("default");
 
-    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget() != "/favicon.ico")
+    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] != "/favicon.ico")
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[curr_event->ident].size()));
     else
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(1150));
@@ -247,7 +345,7 @@ void    KeventHandler::sendResponse(struct kevent* curr_event)
     if (n == -1)
     {
         std::cerr << "client write error!" << std::endl;
-        disconnectClient(curr_event->ident, fd_content_);
+        disconnectClient(curr_event->ident);
         fd_manager_[curr_event->ident].setFdError(1);
     }
     else
@@ -288,6 +386,7 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
             {
                 if (fd_content_[curr_event->ident].size() != 0)
                     return (READ_FINISH_REQUEST);
+                
             }
             else
                 return (READ_FINISH_FILE);
@@ -295,6 +394,8 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
         else
             return (READ_CONTINUE);
     }
+    if (curr_event->flags & EV_EOF)
+        return (CLOSE_CONNECTION);
     return (-1);
 }
 
@@ -308,6 +409,7 @@ int  KeventHandler::writeFdFlag(struct kevent* curr_event)
         else
             return (EDIT_FILE);
     }
+    std::cout << "write : " << curr_event->flags << "\n";
     return (-1);
 }
 
@@ -323,6 +425,7 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
     }
     else if (curr_event->filter == EVFILT_WRITE)
         return (writeFdFlag(curr_event));
+    std::cout << "ev_flags: " << curr_event->flags << "\n";
     return (-1);
 }
 
@@ -335,7 +438,7 @@ void KeventHandler::socketError(struct kevent*  curr_event)
         else
         {
             throw(std::runtime_error("client socket error"));
-            disconnectClient(curr_event->ident, fd_content_);
+            disconnectClient(curr_event->ident);
         }
     }
 }
@@ -343,7 +446,7 @@ void KeventHandler::socketError(struct kevent*  curr_event)
 void KeventHandler::clientReadError(struct kevent* curr_event)
 {
     std::cerr << "client read error!" <<std::endl;
-    disconnectClient(curr_event->ident, fd_content_);
+    disconnectClient(curr_event->ident);
 }
 
 void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
@@ -405,8 +508,16 @@ void KeventHandler::runServer(void)
                 case EDIT_FILE :
                     break ;
 
+                case CLOSE_CONNECTION :
+                    disconnectClient(curr_event->ident);
+                    break ;
+
                 default :
+                {
+                    std::cout << "flag: " << curr_event->flags << "\n";
+                    std::cout << "type: " << event_type << "\n";
                     throw(std::runtime_error("event exception error\n"));
+                }
             }
         }
     }

@@ -129,18 +129,23 @@ Location Server::getLocationBlock(int idx)
     return (location_block_[idx]);
 }
 
-// util
-int Server::findLocationBlock(std::string url)   // 도메인 뒤에 url로 넘겨주도록
+std::vector<Location> Server::getLocation(void)
 {
-    for(size_t i = 0; i < location_block_.size(); i++)
-    {
-        if (location_block_[i].getUrlPostfix() == url)
-        {
-            return (i);
-        }
-    }
-    return (-1);
+    return (location_block_);
 }
+
+// util
+// int Server::findLocationBlock(std::string url)   // 도메인 뒤에 url로 넘겨주도록
+// {
+//     for(size_t i = 0; i < location_block_.size(); i++)
+//     {
+//         if (location_block_[i].getUrlPostfix() == url)
+//         {
+//             return (i);
+//         }
+//     }
+//     return (-1);
+// }
 
 void Server::setLocation(Location &location)
 {
