@@ -10,6 +10,13 @@ KeventHandler::~KeventHandler()
 
 }
 
+void    checkRequest(Request &req)
+{
+    // std::cout << "=====start_line=====\n";
+    std::cout << "Host: " << req.getHeaders().getHost() << "\n";
+    std::cout << "Listen socket: " << req.getHeaders().getListenPort() << "\n";
+}
+
 void    KeventHandler::disconnectClient(int client_fd, std::map< int, std::vector<char> >& data)
 {
     std::cout << "client disconnected: " << client_fd << std::endl;
@@ -101,11 +108,15 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
 
 int KeventHandler::getServerIndex(Request req)
 {
+    // std::cout << req.getHeaders().getListenPort() << " " << req.getHeaders().getHost() << "\n";
     for (size_t i = 0; i < http_.getServer().size(); i++)
     {
+        // std::cout << "=======get_server" << "\n";
+        // std::cout << http_.getServer()[i].getListenPort() << "\n" << http_.getServer()[i].getServerName() << "\n";
         if (req.getHeaders().getListenPort() == http_.getServer()[i].getListenPort() &&
             req.getHeaders().getHost() == http_.getServer()[i].getServerName())
         {
+            // std::cout << http_.getServer()[i].getListenPort() << "\n" << http_.getServer()[i].getServerName() << "\n";
             return (i);
         }
     }
@@ -130,6 +141,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)
     {
         std::getline(streamLine, temp, ' ');
         if (temp.find("Host:") != std::string::npos) {
+            std::getline(streamLine, temp, ' ');
             req.getHeaders().setFullPath(temp);
             break ;
         }

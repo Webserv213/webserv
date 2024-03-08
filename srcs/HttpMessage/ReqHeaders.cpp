@@ -69,6 +69,7 @@ void    ReqHeaders::setFullPath(std::string& host)
                     {
                         if (host[i] == '/')
                         {
+                            listen_port_ = std::atoi(listen_port_str.c_str());
                             while (i < host.size())
                             {
                                 url_postfix_ += host[i];
@@ -82,6 +83,7 @@ void    ReqHeaders::setFullPath(std::string& host)
                         }
                         i++;
                     }
+                    listen_port_ = std::atoi(listen_port_str.c_str());
                     return ;
                 }
                 else if (host[i] == '/')
@@ -101,7 +103,6 @@ void    ReqHeaders::setFullPath(std::string& host)
             host_ += host[i];
         }
     }
-    listen_port_ = std::atoi(listen_port_str.c_str());
 }
 
 void    ReqHeaders::setUpgradeInsecureRequests(std::string& upgrade_insecure_requests)
