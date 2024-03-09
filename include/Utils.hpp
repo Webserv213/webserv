@@ -12,5 +12,7 @@ std::string         strTrim(std::string &str, char c);
 std::string         checkSemicolon(std::string &str);
 void                getlineSkipDelemeter(std::istringstream& stream_file_contents, std::string& buff, char c);
 std::string         mySubstr(std::string::iterator start, std::string::iterator end);
+bool				isFileOrDirectory(const char* path);
+
 
 #endif

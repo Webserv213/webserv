@@ -72,6 +72,7 @@ private:
     void    methodGetHandler(Server &server, Request &req, int curr_event_fd);
 
     int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);
+    std::string makeDirList(std::string file_path);
 
 public:
     KeventHandler(Http &http);

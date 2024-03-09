@@ -1,4 +1,5 @@
 #include "KeventHandler.hpp"
+#include <dirent.h>
 
 KeventHandler::KeventHandler(Http &http): http_(http)
 {
@@ -173,6 +174,37 @@ int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Ser
     return (index);
 }
 
+std::string KeventHandler::makeDirList(std::string file_path)
+{
+    DIR* dir = opendir(file_path.c_str());
+    if (!dir) {
+        // 디렉토리 열기 실패
+        throw (std::runtime_error("Error: Unable to open directory."));
+    }
+
+    std::string result;
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        std::string name = entry->d_name;
+        if (name != "." && name != "..") {
+            result += name;
+            result += "\n";
+        }
+    }
+
+    closedir(dir);
+
+    // int fd;
+    // fd = open ("./var/www/tmp/dirlist", O_WRONLY);
+    // if (fd < 0)
+    //     throw (std::runtime_error("Error: Unable to open dirlist directory."));
+
+
+
+    return (result);
+}
+
 void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)
 {
     int fd = 0;
@@ -207,9 +239,37 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
                 file_path += req.getRequestLine().getRequestTarget()[i];
             }
         }
-        file_path += "/index.html";
+        //
+        if (isFileOrDirectory(file_path.c_str())) {
+            std::cout << "File" << std::endl;
+        } else {
+            std::cout << "directory" << std::endl;
+            // autoindex off
+            if (server.getLocationBlock(loc_idx).getAutoIndex() == false)
+                file_path += "/index.html";
+            else  // autoindex on
+            {
+                // 리스트 써서 file 생성해서 저정하고 처리 끝나면 지워주기
+                std::string buf = makeDirList(file_path);
+                // fd_content_[curr_event_fd] = buf;
+                // fd_manager_[curr_event_fd].getResponse().setBody(buf);
+                // file_path += "/list.html";
+
+                // 파일 만들고, file_path 만 바꿔주기
+                // int fd;
+                // fd = open ("./var/www/tmp/dirlist", O_WRONLY);
+                // if (fd < 0)
+                //     throw (std::runtime_error("Error: Unable to open dirlist directory."));
+                std::ofstream file("./var/www/tmp/dirlist");
+                if (file.is_open())
+                {
+                    file << buf;
+                    file.close();
+                }
+                file_path = "./var/www/tmp/dirlist";
+            }
+        }
         std::cout << "path: " << file_path << "\n";
-        // file_path = server.getLocationBlock(loc_idx).getRoot() + req.getRequestLine().getRequestTarget() + "/index.html";
     }
 
     // location
@@ -218,6 +278,10 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     // 3. 디렉토리 -> autoindex off -> index.html
     // 4. 아니면 404
 
+    // 끝나는 부분이 디렉토리인지 아닌지 확인을 해서
+    // 디렉토리이면 auto-index 를 확인을 하는데 on이면 그 리스트?? 그거 출력이고 off면 그냥 .html
+    // 파일이면 그냥 파일 반환
+
     if (fd >= 0)
     {
         fd = open (file_path.c_str(), O_RDONLY);
@@ -225,7 +289,6 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     }
     if (fd < 0)
     {
-        // std::cout << "file open error: " << file_path << "\n";
         fd = open ("./var/www/error/error_404.html", O_RDONLY);
         fcntl(fd, F_SETFL, O_NONBLOCK);
 

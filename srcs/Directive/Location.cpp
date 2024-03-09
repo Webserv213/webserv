@@ -3,8 +3,7 @@
 
 Location::Location(void)
 {
-    // root_ = "./var/www/default";
-    autoindex_ = true;
+    autoindex_ = false;
     client_max_body_size_ = 10000;
     error_page_["404"] = "./var/www/error";
 }

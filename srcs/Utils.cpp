@@ -3,6 +3,7 @@
 # include <iostream>
 # include <string>
 # include <sstream>
+# include <sys/stat.h>
 
 void   printCharVector(std::vector<char>& vector_char)
 {
@@ -97,4 +98,22 @@ std::string mySubstr(std::string::iterator start, std::string::iterator end)
     }
 
     return result_str;
+}
+
+bool isFileOrDirectory(const char* path)
+{
+    struct stat fileInfo;
+    if (stat(path, &fileInfo) != 0) {
+        // stat 호출이 실패한 경우
+        throw(std::runtime_error("file error(isFileOrDirectory)"));
+    }
+
+    if (S_ISREG(fileInfo.st_mode)) {
+        // 일반 파일인 경우
+        return true;
+    } else if (S_ISDIR(fileInfo.st_mode)) {
+        // 디렉토리인 경우
+        return false;
+    }
+    return (false);
 }
