@@ -68,7 +68,7 @@ private:
     int     readFdFlag(struct kevent* curr_event, char *buf, int *n);
     int     writeFdFlag(struct kevent* curr_event);
 
-    int     getLocationIndex(std::vector<std::string> request_target, Server &server);
+    int     getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *size);
     void    methodGetHandler(Server &server, Request &req, int curr_event_fd);
 
     int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);

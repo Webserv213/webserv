@@ -139,51 +139,76 @@ int KeventHandler::compareLocation(std::vector<std::string> t, std::vector<std::
     return (i);
 }
 
-int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Server &server)
+int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *size)
 {
-    // target 
+    // target
     // 슬래시 기준으로 잘라서 vector에 삽입
 
     // post_fix 슬래시 시준으로 잘라서 vector에 삽입
     // target하고 postfix 벡터 비교하면서 하나라고 다른게 있으면 바로 끝 아니면 인덱스 증가 (제일 큰 인덱스로 계속 갱신)
 
     int index = 0;
-    size_t size, size2;
+    size_t size2;
     std::string url;
 
+    if (request_target.size() == 0)
+        return (-1);  // default
+
     // 예외! size와 target.size() 무조건 걔의 인덱스 반환
-    size = compareLocation(request_target, server.getLocation()[0].getUrlPostfix());           // 초기값
+    *size = compareLocation(request_target, server.getLocation()[0].getUrlPostfix());           // 초기값
     for(size_t i = 1; i < server.getLocation().size(); i++)
     {
         size2 = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
         if (size2 == server.getLocation()[i].getUrlPostfix().size())
             return (i);
-        if (size < size2)
+        if (*size < size2)
         {
-            size = size2;
+            *size = size2;
             index = i;
         }
     }
+    if (request_target.size() < server.getLocation()[index].getUrlPostfix().size())
+        return (-2);
+        // throw (std::runtime_error("404 ERROR"));
     return (index);
 }
 
 void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)
 {
+    int fd = 0;
     std::string file_path;
-    if (req.getRequestLine().getRequestTarget()[0] == "/favicon.ico")
+
+    if (req.getRequestLine().getRequestTarget().size() != 0 && req.getRequestLine().getRequestTarget()[0] == "favicon.ico")
     {
         file_path = "./var/www/favicon.ico";
     }
     else
     {
-        int loc_idx;
-    
-        loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server);
-        // file_path = server.getRoot() + req.getRequestLine().getRequestTarget() + "/index.html";
-        file_path = server.getLocationBlock(loc_idx).getRoot();
-        for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
-            file_path += req.getRequestLine().getRequestTarget()[i];
+        int loc_idx = 0;
+        size_t size = 0;
+
+        loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
+        std::cout << "loc idx: " << loc_idx << "\n";
+
+        if (loc_idx == -1)
+            file_path = server.getRoot();
+        else if (loc_idx == -2)
+            fd = -1;
+        else
+        {
+            // file_path 만들기
+            file_path = server.getLocationBlock(loc_idx).getRoot();
+
+            for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
+            {
+                if (i < size)
+                    continue;
+                file_path += "/";
+                file_path += req.getRequestLine().getRequestTarget()[i];
+            }
+        }
         file_path += "/index.html";
+        std::cout << "path: " << file_path << "\n";
         // file_path = server.getLocationBlock(loc_idx).getRoot() + req.getRequestLine().getRequestTarget() + "/index.html";
     }
 
@@ -193,15 +218,19 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     // 3. 디렉토리 -> autoindex off -> index.html
     // 4. 아니면 404
 
-
-    int fd;
-
-    fd = open (file_path.c_str(), O_RDONLY);
-    fcntl(fd, F_SETFL, O_NONBLOCK);
+    if (fd >= 0)
+    {
+        fd = open (file_path.c_str(), O_RDONLY);
+        fcntl(fd, F_SETFL, O_NONBLOCK);
+    }
     if (fd < 0)
     {
-        std::cout << file_path + " fd_error : " << fd << std::endl;
-        exit(0);
+        // std::cout << "file open error: " << file_path << "\n";
+        fd = open ("./var/www/error/error_404.html", O_RDONLY);
+        fcntl(fd, F_SETFL, O_NONBLOCK);
+
+        if (fd < 0)
+            throw (std::runtime_error("404 OPEN ERROR"));
     }
     fd_content_[fd];
     EventRecorder event_recorder(curr_event_fd);
@@ -300,20 +329,22 @@ void KeventHandler::createResponse(struct kevent* curr_event)
 
     fd_manager_[parent_fd].getResponse().getHeaders().setDate(buffer);
 
-    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] != "/favicon.ico")
-        fd_manager_[parent_fd].getResponse().getHeaders().setContentType("text/html");
-    else
+    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size() != 0 && fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] == "/favicon.ico")
         fd_manager_[parent_fd].getResponse().getHeaders().setContentType("image/x-icon");
+    else
+        fd_manager_[parent_fd].getResponse().getHeaders().setContentType("text/html");
+
 
     fd_manager_[parent_fd].getResponse().getHeaders().setLastModified("default");
     fd_manager_[parent_fd].getResponse().getHeaders().setTransferEncoding("default");
     fd_manager_[parent_fd].getResponse().getHeaders().setConnection("keep-alive");
     fd_manager_[parent_fd].getResponse().getHeaders().setContentEncoding("default");
 
-    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] != "/favicon.ico")
-        fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[curr_event->ident].size()));
-    else
+    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size() != 0 && fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] == "/favicon.ico")
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(1150));
+    else
+        fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[curr_event->ident].size()));
+
 
     std::string file_data(charVectorToString(fd_content_[curr_event->ident]));
     fd_manager_[parent_fd].getResponse().setBody(file_data);
@@ -386,7 +417,7 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
             {
                 if (fd_content_[curr_event->ident].size() != 0)
                     return (READ_FINISH_REQUEST);
-                
+
             }
             else
                 return (READ_FINISH_FILE);

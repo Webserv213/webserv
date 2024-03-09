@@ -40,6 +40,7 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
         {
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
+            // std::cout << "buff: " << buff << "\n";
             new_location.setRoot(buff);
         }
         else if (buff == "autoindex")
@@ -49,7 +50,7 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
             if (buff == "on")
                 new_location.setAutoIndex(true);
             else
-                new_location.setAutoIndex(false);    
+                new_location.setAutoIndex(false);
         }
         else if (buff == "client_max_body_size")
         {

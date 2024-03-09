@@ -9,7 +9,7 @@ class Server;
 
 class Location
 {
-private:    
+private:
     std::string                 root_;
     std::vector<std::string>    url_postfix_;
     // std::string                 url_postfix_;

@@ -8,7 +8,7 @@ RequestLine::RequestLine(void)
 
 RequestLine::~RequestLine(void)
 {
-    
+
 }
 
 void    RequestLine::setMethod(std::string& method)
@@ -22,7 +22,10 @@ void    RequestLine::setRequestTarget(std::string& request_target)
     std::istringstream streamLine(request_target);
 
     while (std::getline(streamLine, buf, '/'))
-        request_target_.push_back(buf);
+    {
+        if (buf != "")
+            request_target_.push_back(buf);
+    }
 }
 
 void    RequestLine::setVersion(std::string& version)

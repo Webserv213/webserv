@@ -3,7 +3,7 @@
 
 Location::Location(void)
 {
-    root_ = "./var/www/default";
+    // root_ = "./var/www/default";
     autoindex_ = true;
     client_max_body_size_ = 10000;
     error_page_["404"] = "./var/www/error";
@@ -19,7 +19,7 @@ Location::Location(Server parent_server)
 
 Location::~Location(void)
 {
-    
+
 }
 
 std::vector<std::string> Location::getUrlPostfix()
@@ -65,11 +65,12 @@ void Location::setUrlPostfix(std::string  url_postfix)
     std::istringstream streamLine(url_postfix);
     while (std::getline(streamLine, buf, '/'))
     {
-        url_postfix_.push_back(buf);
+        if (buf != "")
+            url_postfix_.push_back(buf);
     }
 }
 
 void Location::setErrorPage(std::string error_code, std::string &path)
 {
-    error_page_[error_code] = path;   
+    error_page_[error_code] = path;
 }
