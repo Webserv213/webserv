@@ -142,12 +142,6 @@ int KeventHandler::compareLocation(std::vector<std::string> t, std::vector<std::
 
 int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *size)
 {
-    // target
-    // 슬래시 기준으로 잘라서 vector에 삽입
-
-    // post_fix 슬래시 시준으로 잘라서 vector에 삽입
-    // target하고 postfix 벡터 비교하면서 하나라고 다른게 있으면 바로 끝 아니면 인덱스 증가 (제일 큰 인덱스로 계속 갱신)
-
     int index = 0;
     size_t size2;
     std::string url;
@@ -192,16 +186,7 @@ std::string KeventHandler::makeDirList(std::string file_path)
             result += "\n";
         }
     }
-
     closedir(dir);
-
-    // int fd;
-    // fd = open ("./var/www/tmp/dirlist", O_WRONLY);
-    // if (fd < 0)
-    //     throw (std::runtime_error("Error: Unable to open dirlist directory."));
-
-
-
     return (result);
 }
 
@@ -211,9 +196,7 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     std::string file_path;
 
     if (req.getRequestLine().getRequestTarget().size() != 0 && req.getRequestLine().getRequestTarget()[0] == "favicon.ico")
-    {
         file_path = "./var/www/favicon.ico";
-    }
     else
     {
         int loc_idx = 0;
@@ -245,21 +228,12 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
         } else {
             std::cout << "directory" << std::endl;
             // autoindex off
-            if (server.getLocationBlock(loc_idx).getAutoIndex() == false)
+            if (loc_idx == -1 || server.getLocationBlock(loc_idx).getAutoIndex() == false)   // default 이거나 autoindex off
                 file_path += "/index.html";
             else  // autoindex on
             {
-                // 리스트 써서 file 생성해서 저정하고 처리 끝나면 지워주기
                 std::string buf = makeDirList(file_path);
-                // fd_content_[curr_event_fd] = buf;
-                // fd_manager_[curr_event_fd].getResponse().setBody(buf);
-                // file_path += "/list.html";
 
-                // 파일 만들고, file_path 만 바꿔주기
-                // int fd;
-                // fd = open ("./var/www/tmp/dirlist", O_WRONLY);
-                // if (fd < 0)
-                //     throw (std::runtime_error("Error: Unable to open dirlist directory."));
                 std::ofstream file("./var/www/tmp/dirlist");
                 if (file.is_open())
                 {
@@ -277,10 +251,6 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     // 2. 디렉토리 -> autoindex on -> autoindex
     // 3. 디렉토리 -> autoindex off -> index.html
     // 4. 아니면 404
-
-    // 끝나는 부분이 디렉토리인지 아닌지 확인을 해서
-    // 디렉토리이면 auto-index 를 확인을 하는데 on이면 그 리스트?? 그거 출력이고 off면 그냥 .html
-    // 파일이면 그냥 파일 반환
 
     if (fd >= 0)
     {
