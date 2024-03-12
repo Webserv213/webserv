@@ -10,12 +10,12 @@ class Server;
 class Location
 {
 private:
-    std::string                 root_;
-    std::vector<std::string>    url_postfix_;
-    // std::string                 url_postfix_;
-    bool                        autoindex_;
-    unsigned long long          client_max_body_size_;
+    std::string                         root_;
+    std::vector<std::string>            url_postfix_;
+    bool                                autoindex_;
+    unsigned long long                  client_max_body_size_;
     std::map<std::string, std::string>  error_page_;
+    std::vector<std::string>            access_method_;
 
 public:
     Location();

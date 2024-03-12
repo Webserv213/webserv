@@ -23,6 +23,7 @@ private:
     unsigned long long          client_max_body_size_;
     std::map<std::string, std::string>  error_page_;
     std::vector<Location>       location_block_;
+    std::vector<std::string>    index_;
 
 public:
     Server();
@@ -42,6 +43,7 @@ public:
     //setter
     Location setLocationBlock(std::istringstream& stream_file_contents);
     void setRoot(std::string &root);
+    void setIndex(std::string &index);
     void setAutoIndex(bool flag);
     void setClientMaxBodySize(unsigned long long client_max_body_size);
     void setErrorPage(std::string error_code, std::string &path);
