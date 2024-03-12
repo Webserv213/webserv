@@ -14,6 +14,7 @@ Location::Location(Server parent_server)
     autoindex_ = parent_server.getAutoIndex();
     client_max_body_size_ = parent_server.getClientMaxBodySize();
     error_page_["404"] = parent_server.getErrorPage("404");
+    index_ = parent_server.getIndex();
 }
 
 Location::~Location(void)
@@ -26,9 +27,19 @@ std::vector<std::string> Location::getUrlPostfix()
     return (url_postfix_);
 }
 
+std::vector<std::string> Location::getAccessMethod()
+{
+    return (access_method_);
+}
+
 std::string Location::getRoot()
 {
     return (root_);
+}
+
+std::string Location::getIndex()
+{
+    return (index_);
 }
 
 bool Location::getAutoIndex()
@@ -45,6 +56,11 @@ unsigned long long Location::getClientMaxBodySize()
 void Location::setRoot(std::string &root)
 {
     root_ = root;
+}
+
+void Location::setIndex(std::string &index)
+{
+    index_ = index;
 }
 
 void Location::setAutoIndex(bool flag)
@@ -67,6 +83,10 @@ void Location::setUrlPostfix(std::string  url_postfix)
         if (buf != "")
             url_postfix_.push_back(buf);
     }
+}
+void Location::setAccessMethod(std::string  access_method)
+{
+    access_method_.push_back(access_method);
 }
 
 void Location::setErrorPage(std::string error_code, std::string &path)

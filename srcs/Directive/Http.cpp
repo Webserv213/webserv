@@ -81,6 +81,12 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
             buff = checkSemicolon(buff);
             new_server.setRoot(buff);
         }
+        else if (buff == "index")
+        {
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            new_server.setIndex(buff);
+        }
         else if (buff == "location")
         {
             Location new_location = new_server.setLocationBlock(stream_file_contents);

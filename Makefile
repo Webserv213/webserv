@@ -16,8 +16,8 @@ OBJS = $(SRCS:.cpp=.o)
 INCLUDE = -I ./include/Directive -I ./include/HttpMessage -I ./include
 NAME = webserv
 CXX = c++
-MYFLAGS = -std=c++98 -Wall -Wextra -Werror
-# MYFLAGS = -std=c++98 -Wall -Wextra -Werror -g -fsanitize=address
+# MYFLAGS = -std=c++98 -Wall -Wextra -Werror
+MYFLAGS = -std=c++98 -Wall -Wextra -Werror -g -fsanitize=address
 CXXFLAGS = $(MYFLAGS) $(INCLUDE)
 
 

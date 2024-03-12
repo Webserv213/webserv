@@ -19,11 +19,11 @@ private:
     unsigned short              listen_port_;
     std::string                 server_name_;
     std::string                 root_;
+    std::string                 index_;
     bool                        autoindex_;
     unsigned long long          client_max_body_size_;
     std::map<std::string, std::string>  error_page_;
     std::vector<Location>       location_block_;
-    std::vector<std::string>    index_;
 
 public:
     Server();
@@ -38,18 +38,21 @@ public:
     std::string getServerName();
     Location getLocationBlock(int idx);
     std::vector<Location> getLocation();
+    std::string getIndex();
 
 
     //setter
     Location setLocationBlock(std::istringstream& stream_file_contents);
     void setRoot(std::string &root);
-    void setIndex(std::string &index);
     void setAutoIndex(bool flag);
     void setClientMaxBodySize(unsigned long long client_max_body_size);
     void setErrorPage(std::string error_code, std::string &path);
     void setListenPort(std::string &listen_port);
     void setServerName(std::string &server_name);
     void setLocation(Location &location);
+    void setIndex(std::string &index);
+
+    //utils
     void pushBackLocationBlock(Location &location);
     
     // util

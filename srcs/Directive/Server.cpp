@@ -8,6 +8,7 @@ Server::Server(void)
     autoindex_ = false;
     client_max_body_size_ = 10000;
     error_page_["404"] = "./var/www/error";
+    index_ = "index.html";
 }
 
 Server::~Server(void)
@@ -58,6 +59,33 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
             buff = checkSemicolon(buff);
             new_location.setClientMaxBodySize(std::atoll(buff.c_str()));
         }
+        else if (buff == "index")
+        {
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            // std::cout << "buff: " << buff << "\n";
+            new_location.setIndex(buff);
+        }
+        else if (buff == "access_method")
+        {
+            while (std::getline(stream_file_contents, buff, ' '))
+            {
+                if (buff.find(';') != std::string::npos)
+                {
+                    buff = checkSemicolon(buff);
+                    new_location.setAccessMethod(buff);
+                    break ;
+                }
+                else if (buff.find('}') != std::string::npos)
+                {
+                    throw (std::runtime_error("Invalid config file contents [semicolon error [access_method]]"));
+                }
+                else if (buff != "")
+                {
+                    new_location.setAccessMethod(buff);
+                }
+            }
+        }
     }
     throw (std::runtime_error("Invalid config file contents [location's close bracket error]"));
     return (new_location);
@@ -94,6 +122,11 @@ void Server::setServerName(std::string &server_name)
     server_name_=server_name;
 }
 
+void Server::setIndex(std::string &index)
+{
+    index_ = index;
+}
+
 // getter
 std::string Server::getRoot(void)
 {
@@ -123,6 +156,11 @@ unsigned short Server::getListenPort()
 std::string Server::getServerName(void)
 {
     return (server_name_);
+}
+
+std::string Server::getIndex(void)
+{
+    return (index_);
 }
 
 Location Server::getLocationBlock(int idx)

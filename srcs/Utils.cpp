@@ -74,7 +74,7 @@ std::string checkSemicolon(std::string &str)
 
     res_str = strTrim(str, ' ');
     if (*(res_str.rbegin()) != ';')
-        throw (std::runtime_error("Invalid config file contents [semicolon error]"));
+        throw (std::runtime_error("Invalid config file contents [semicolon error [" + res_str + "]]"));
     res_str.pop_back();
     return (res_str);
 }
