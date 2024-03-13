@@ -37,6 +37,8 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
     if (buff != "{")
         throw (std::runtime_error("Invalid config file contents [server's open bracket error]"));
 
+
+
     // 서버 블록 데이터 저장
     while (std::getline(stream_file_contents, buff, ' '))
     {
@@ -89,10 +91,20 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
         }
         else if (buff == "location")
         {
+            if (new_server.getLocation().size() == 0)
+                new_server.createDefaultLocation();
+
             Location new_location = new_server.setLocationBlock(stream_file_contents);
-            new_server.pushBackLocationBlock(new_location);
+            if (new_location.getUrlPostfix().size() == 0)    // '/'인 경우 [0]번째에 넣어주기
+                new_server.fixLocation(0, new_location);
+            else
+                new_server.pushBackLocationBlock(new_location);
         }
     }
+
+    if (new_server.getLocation().size() == 0)
+        new_server.createDefaultLocation();
+
     throw (std::runtime_error("Invalid config file contents [server's close bracket error]"));
     return (new_server);
 }

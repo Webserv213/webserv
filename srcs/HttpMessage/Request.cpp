@@ -44,7 +44,7 @@ void Request::setBody(std::string& body)
 
 //     int fd;
 //     fd = open (file_path.c_str(), O_RDONLY);
-//     fcntl(fd, F_SETFL, O_NONBLOCK);
+//     fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 //     if (fd < 0)
 //     {
 //         std::cout << file_path + " fd_error : " << fd << std::endl;

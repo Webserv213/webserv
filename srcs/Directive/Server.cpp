@@ -195,3 +195,18 @@ void Server::pushBackLocationBlock(Location &location)
 {
     location_block_.push_back(location);
 }
+
+// void Server::pushFrontLocationBlock(Location &location)
+// {
+//     location_block_.push_back(location);
+// }
+
+void Server::fixLocation(int idx, Location &location)
+{
+    location_block_[idx] = location;
+}
+
+void Server::createDefaultLocation()
+{
+    location_block_.push_back(*this);
+}

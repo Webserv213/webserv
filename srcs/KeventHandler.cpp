@@ -64,7 +64,7 @@ void KeventHandler::openListenSocket()
 
         if (listen(listen_socket_fd, 50) == -1)
             throw(std::runtime_error("listen() error\n"));
-        fcntl(listen_socket_fd, F_SETFL, O_NONBLOCK);
+        fcntl(listen_socket_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 
         server_sockets_.push_back(listen_socket_fd);
         changeEvents(change_list_, listen_socket_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
@@ -93,7 +93,7 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
             if (client_socket == -1)
                 throw(std::runtime_error("accept() error\n"));
             std::cout << "accept new client: " << client_socket << std::endl;
-            fcntl(client_socket, F_SETFL, O_NONBLOCK);
+            fcntl(client_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 
             /* add event for client socket - add read & write event */
             EventRecorder st;
@@ -130,7 +130,7 @@ int KeventHandler::compareLocation(std::vector<std::string> t, std::vector<std::
 
     while (i < t.size())
     {
-        if (i > loc.size() - 1)
+        if (i + 1 > loc.size())
             return (i);
 
         if (t[i] != loc[i])
@@ -140,31 +140,29 @@ int KeventHandler::compareLocation(std::vector<std::string> t, std::vector<std::
     return (i);
 }
 
-int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *size)
+int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *res_same_path_cnt)
 {
     int index = 0;
-    size_t size2;
-    std::string url;
+    size_t same_path_cnt;
 
-    if (request_target.size() == 0)
-        return (-1);  // default
-
-    // 예외! size와 target.size() 무조건 걔의 인덱스 반환
-    *size = compareLocation(request_target, server.getLocation()[0].getUrlPostfix());           // 초기값
-    for(size_t i = 1; i < server.getLocation().size(); i++)
+    for (size_t i = 1; i < server.getLocation().size(); i++)
     {
-        size2 = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
-        if (size2 == server.getLocation()[i].getUrlPostfix().size())
-            return (i);
-        if (*size < size2)
+        same_path_cnt = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
+        if (same_path_cnt == server.getLocation()[i].getUrlPostfix().size())
         {
-            *size = size2;
+            *res_same_path_cnt = same_path_cnt;
+            return (i);
+        }
+        if (*res_same_path_cnt < same_path_cnt)
+        {
+            *res_same_path_cnt = same_path_cnt;
             index = i;
         }
     }
     if (request_target.size() < server.getLocation()[index].getUrlPostfix().size())
-        return (-2);
-        // throw (std::runtime_error("404 ERROR"));
+    {
+        return (0);
+    }
     return (index);
 }
 
@@ -205,24 +203,17 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
         loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
         std::cout << "loc idx: " << loc_idx << "\n";
 
-        if (loc_idx == -1)
-            file_path = server.getRoot();
-        else if (loc_idx == -2)
-            fd = -1;
-        else
-        {
-            // file_path 만들기
-            file_path = server.getLocationBlock(loc_idx).getRoot();
+        // file_path 만들기
+        file_path = server.getLocationBlock(loc_idx).getRoot();
 
-            for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
-            {
-                if (i < size)
-                    continue;
-                file_path += "/";
-                file_path += req.getRequestLine().getRequestTarget()[i];
-            }
+        for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
+        {
+            if (i < size)
+                continue ;
+            file_path += "/";
+            file_path += req.getRequestLine().getRequestTarget()[i];
         }
-        //
+        
         if (isFileOrDirectory(file_path.c_str())) {
             std::cout << "File" << std::endl;
         } else {
@@ -230,6 +221,7 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
             // autoindex off
             if (loc_idx == -1 || server.getLocationBlock(loc_idx).getAutoIndex() == false)   // default 이거나 autoindex off
                 file_path += "/index.html";
+                // file_path += server.getLocationBlock(loc_idx).getIndex();
             else  // autoindex on
             {
                 std::string buf = makeDirList(file_path);
@@ -255,12 +247,12 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     if (fd >= 0)
     {
         fd = open (file_path.c_str(), O_RDONLY);
-        fcntl(fd, F_SETFL, O_NONBLOCK);
+        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
     }
     if (fd < 0)
     {
         fd = open ("./var/www/error/error_404.html", O_RDONLY);
-        fcntl(fd, F_SETFL, O_NONBLOCK);
+        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 
         if (fd < 0)
             throw (std::runtime_error("404 OPEN ERROR"));

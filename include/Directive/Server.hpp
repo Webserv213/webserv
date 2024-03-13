@@ -23,7 +23,8 @@ private:
     bool                        autoindex_;
     unsigned long long          client_max_body_size_;
     std::map<std::string, std::string>  error_page_;
-    std::vector<Location>       location_block_;
+    std::vector<Location>       location_block_;  // [0] : default location
+    // Location                    default_loc_;
 
 public:
     Server();
@@ -54,6 +55,8 @@ public:
 
     //utils
     void pushBackLocationBlock(Location &location);
+    void fixLocation(int idx, Location &location);
+    void createDefaultLocation();
     
     // util
     // int findLocationBlock(std::string url);
