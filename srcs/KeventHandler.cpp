@@ -188,9 +188,22 @@ std::string KeventHandler::makeDirList(std::string file_path)
     return (result);
 }
 
+bool KeventHandler::checkAccessMethod(std::string method, Location location)
+{
+    bool exist = false;
+
+    for (size_t i = 0; i < location.getAccessMethod().size(); i++)
+    {
+        if (location.getAccessMethod()[i] == method)
+            exist = true;
+    }
+    return (exist);
+}
+
 void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)
 {
     int fd = 0;
+    bool allow_method = false;
     std::string file_path;
 
     if (req.getRequestLine().getRequestTarget().size() != 0 && req.getRequestLine().getRequestTarget()[0] == "favicon.ico")
@@ -203,39 +216,48 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
         loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
         std::cout << "loc idx: " << loc_idx << "\n";
 
-        // file_path 만들기
-        file_path = server.getLocationBlock(loc_idx).getRoot();
-
-        for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
+        allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
+        if (allow_method == true)
         {
-            if (i < size)
-                continue ;
-            file_path += "/";
-            file_path += req.getRequestLine().getRequestTarget()[i];
-        }
-        
-        if (isFileOrDirectory(file_path.c_str())) {
-            std::cout << "File" << std::endl;
-        } else {
-            std::cout << "directory" << std::endl;
-            // autoindex off
-            if (loc_idx == -1 || server.getLocationBlock(loc_idx).getAutoIndex() == false)   // default 이거나 autoindex off
-                file_path += "/index.html";
-                // file_path += server.getLocationBlock(loc_idx).getIndex();
-            else  // autoindex on
-            {
-                std::string buf = makeDirList(file_path);
+            // file_path 만들기
+            file_path = server.getLocationBlock(loc_idx).getRoot();
 
-                std::ofstream file("./var/www/tmp/dirlist");
-                if (file.is_open())
-                {
-                    file << buf;
-                    file.close();
-                }
-                file_path = "./var/www/tmp/dirlist";
+            for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
+            {
+                if (i < size)
+                    continue ;
+                file_path += "/";
+                file_path += req.getRequestLine().getRequestTarget()[i];
             }
+            
+            if (isFileOrDirectory(file_path.c_str()))
+            {
+                std::cout << "File" << std::endl;
+            }
+            else
+            {
+                std::cout << "directory" << std::endl;
+                // autoindex off
+                if (server.getLocationBlock(loc_idx).getAutoIndex() == false)   // default 이거나 autoindex off
+                    // file_path += "/index.html";
+                    file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
+                else  // autoindex on
+                {
+                    std::string buf = makeDirList(file_path);
+
+                    std::ofstream file("./var/www/tmp/dirlist");
+                    if (file.is_open())
+                    {
+                        file << buf;
+                        file.close();
+                    }
+                    file_path = "./var/www/tmp/dirlist";
+
+                    //autoindex flag;
+                }
+            }
+            std::cout << "path: " << file_path << "\n";
         }
-        std::cout << "path: " << file_path << "\n";
     }
 
     // location
@@ -244,25 +266,33 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     // 3. 디렉토리 -> autoindex off -> index.html
     // 4. 아니면 404
 
-    if (fd >= 0)
+    if (allow_method == true)
     {
-        fd = open (file_path.c_str(), O_RDONLY);
-        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-    }
-    if (fd < 0)
-    {
-        fd = open ("./var/www/error/error_404.html", O_RDONLY);
-        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-
+        if (fd >= 0)
+        {
+            fd = open (file_path.c_str(), O_RDONLY);
+            fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+        }
         if (fd < 0)
-            throw (std::runtime_error("404 OPEN ERROR"));
+        {
+            fd = open ("./var/www/error/error_404.html", O_RDONLY);
+            fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+
+            if (fd < 0)
+                throw (std::runtime_error("404 OPEN ERROR"));
+        }
+    }
+    else
+    {
+        fd = open ("./var/www/error/error_405.html", O_RDONLY);
+        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
     }
     fd_content_[fd];
     EventRecorder event_recorder(curr_event_fd);
     event_recorder.setEventReadFile(1);
     fd_manager_[fd] = event_recorder;
     changeEvents(change_list_, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
-    changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+    changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);  // autoindex flag 값에 따라서
     fd_manager_[curr_event_fd].setEventWriteRes(-1);
 }
 
