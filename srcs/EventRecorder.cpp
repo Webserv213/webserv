@@ -10,6 +10,7 @@ EventRecorder::EventRecorder()
     parent_client_fd_ = -1;
     fd_error_ = -1;
     file_offset_ = 0;
+    autoindex_ = -1;
 }
 
 EventRecorder::EventRecorder(int parent_client_fd)
@@ -22,6 +23,7 @@ EventRecorder::EventRecorder(int parent_client_fd)
     file_offset_ = 0;
     parent_client_fd_ = parent_client_fd;
     fd_error_ = -1;
+    autoindex_ = -1;
 }
 
 EventRecorder::~EventRecorder()
@@ -69,6 +71,11 @@ void EventRecorder::setFdError(int flag)
     fd_error_ = flag;
 }
 
+void EventRecorder::setAutoindexFlag(int flag)
+{
+    autoindex_ = flag;
+}
+
 void EventRecorder::setRequest(Request& req)
 {
     req_ = req;
@@ -112,6 +119,11 @@ int EventRecorder::getParentClientFd(void)
 int EventRecorder::getFdError(void)
 {
     return (fd_error_);
+}
+
+int EventRecorder::getAutoindexFlag(void)
+{
+    return (autoindex_);
 }
 
 Request& EventRecorder::getRequest()

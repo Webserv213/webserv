@@ -200,6 +200,56 @@ bool KeventHandler::checkAccessMethod(std::string method, Location location)
     return (exist);
 }
 
+void KeventHandler::createResponseAutoindex(int curr_event_fd, std::string file_path)
+{
+    std::string version = fd_manager_[curr_event_fd].getRequest().getRequestLine().getVersion();
+
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setVersion(version);
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("200");
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("OK");
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setServer("default");
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setKeepAlive("timeout=100");
+
+    time_t rawTime;
+    time(&rawTime);
+
+    struct tm *timeInfo;
+    timeInfo = gmtime(&rawTime);
+
+    char buffer[80];
+    strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", timeInfo);
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setDate(buffer);
+
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setContentType("text/html");
+
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setLastModified("default");
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setTransferEncoding("default");
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setConnection("keep-alive");
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setContentEncoding("default");
+
+
+    std::string buf = makeDirList(file_path);
+    fd_manager_[curr_event_fd].getResponse().getHeaders().setContentLength(std::to_string(buf.size()));
+    fd_manager_[curr_event_fd].getResponse().setBody(buf);
+
+    std::string res_tmp;
+    res_tmp = "";
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setVersion("HTTP/1.1");
+    res_tmp += (fd_manager_[curr_event_fd].getResponse().getStatusLine().getVersion() + " ");
+    res_tmp += (fd_manager_[curr_event_fd].getResponse().getStatusLine().getStatusCode() + " ");
+    res_tmp += (fd_manager_[curr_event_fd].getResponse().getStatusLine().getStatusText() + "\r\n");
+    res_tmp += ("Date: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getDate() + "\n");
+    res_tmp += ("Content-Type: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getContentType() + "\n");
+    res_tmp += ("Content-Length: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getContentLength() + "\n");
+    res_tmp += ("Connection: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getConnection() + "\n");
+    res_tmp += ("Keep-Alive: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getKeepAlive() + "\r\n");
+    res_tmp += "\r\n" + charVectorToString(fd_manager_[curr_event_fd].getResponse().getBody());
+    fd_content_[curr_event_fd] = stringToCharVector(res_tmp);
+
+    fd_manager_[curr_event_fd].setEventWriteRes(1);
+    changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[curr_event_fd]);
+}
+
 void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)
 {
     int fd = 0;
@@ -229,7 +279,6 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
                 file_path += "/";
                 file_path += req.getRequestLine().getRequestTarget()[i];
             }
-            
             if (isFileOrDirectory(file_path.c_str()))
             {
                 std::cout << "File" << std::endl;
@@ -239,21 +288,28 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
                 std::cout << "directory" << std::endl;
                 // autoindex off
                 if (server.getLocationBlock(loc_idx).getAutoIndex() == false)   // default 이거나 autoindex off
+                {
                     // file_path += "/index.html";
-                    file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
+                     file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
+                }
                 else  // autoindex on
                 {
-                    std::string buf = makeDirList(file_path);
 
-                    std::ofstream file("./var/www/tmp/dirlist");
-                    if (file.is_open())
-                    {
-                        file << buf;
-                        file.close();
-                    }
-                    file_path = "./var/www/tmp/dirlist";
+                    // std::string buf = makeDirList(file_path);
+
+                    // std::ofstream file("./var/www/tmp/dirlist");
+                    // if (file.is_open())
+                    // {
+                    //     file << buf;
+                    //     file.close();
+                    // }
+                    // file_path = "./var/www/tmp/dirlist";
 
                     //autoindex flag;
+                    fd_manager_[curr_event_fd].setAutoindexFlag(1);
+                    createResponseAutoindex(curr_event_fd, file_path);
+                    printCharVector(fd_content_[curr_event_fd]);
+
                 }
             }
             std::cout << "path: " << file_path << "\n";
@@ -266,34 +322,36 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     // 3. 디렉토리 -> autoindex off -> index.html
     // 4. 아니면 404
 
-    if (allow_method == true)
+    if (fd_manager_[curr_event_fd].getAutoindexFlag() == -1)
     {
-        if (fd >= 0)
+        if (allow_method == true)
         {
-            fd = open (file_path.c_str(), O_RDONLY);
-            fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-        }
-        if (fd < 0)
-        {
-            fd = open ("./var/www/error/error_404.html", O_RDONLY);
-            fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-
+            if (fd >= 0)
+            {
+                fd = open (file_path.c_str(), O_RDONLY);
+                fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+            }
             if (fd < 0)
-                throw (std::runtime_error("404 OPEN ERROR"));
+            {
+                fd = open("./var/www/error/error_404.html", O_RDONLY);
+                fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+                if (fd < 0)
+                    throw (std::runtime_error("404 OPEN ERROR"));
+            }
         }
+        else
+        {
+            fd = open ("./var/www/error/error_405.html", O_RDONLY);
+            fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+        }
+        fd_content_[fd];
+        EventRecorder event_recorder(curr_event_fd);
+        event_recorder.setEventReadFile(1);
+        fd_manager_[fd] = event_recorder;
+        changeEvents(change_list_, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
+        fd_manager_[curr_event_fd].setEventWriteRes(-1);
     }
-    else
-    {
-        fd = open ("./var/www/error/error_405.html", O_RDONLY);
-        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-    }
-    fd_content_[fd];
-    EventRecorder event_recorder(curr_event_fd);
-    event_recorder.setEventReadFile(1);
-    fd_manager_[fd] = event_recorder;
-    changeEvents(change_list_, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
-    changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);  // autoindex flag 값에 따라서
-    fd_manager_[curr_event_fd].setEventWriteRes(-1);
+    changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 }
 
 void    KeventHandler::createRequest(struct kevent* curr_event)
@@ -400,7 +458,6 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     else
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[curr_event->ident].size()));
 
-
     std::string file_data(charVectorToString(fd_content_[curr_event->ident]));
     fd_manager_[parent_fd].getResponse().setBody(file_data);
 
@@ -488,12 +545,17 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
 int  KeventHandler::writeFdFlag(struct kevent* curr_event)
 {
     std::map<int, std::vector<char> >::iterator it = fd_content_.find(curr_event->ident);
+    // printCharVector(fd_content_[curr_event->ident]);
     if (it != fd_content_.end())
     {
         if (fd_content_[curr_event->ident].size() != 0 && fd_manager_[curr_event->ident].getEventWriteRes() == 1)
+        {
             return (SEND_RESPONSE);
+        }
         else
+        {
             return (EDIT_FILE);
+        }
     }
     std::cout << "write : " << curr_event->flags << "\n";
     return (-1);

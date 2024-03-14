@@ -57,6 +57,7 @@ private:
     int     getServerIndex(Request req);
     void    createRequest(struct kevent* curr_event);
     void    createResponse(struct kevent* curr_event);
+    void    createResponseAutoindex(int curr_event_fd, std::string file_path);
     void    sendResponse(struct kevent* curr_event);
     void    setServerSocket(struct sockaddr_in *server_addr, Server server);
     bool    createClientSocket(struct kevent* curr_event);

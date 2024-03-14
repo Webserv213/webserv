@@ -15,6 +15,7 @@ private:
     int parent_client_fd_;
     int fd_error_;
     int file_offset_;
+    int autoindex_;
     Request req_;
     Response res_;
 
@@ -31,6 +32,7 @@ public:
     void setEventWriteFile(int flag);
     void setParentClientFd(int fd);
     void setFdError(int flag);
+    void setAutoindexFlag(int flag);
     void setRequest(Request& req);
     void setResponse(Response& res);
 
@@ -41,6 +43,7 @@ public:
     int getEventWriteFile(void);
     int getParentClientFd(void);
     int getFdError(void);
+    int getAutoindexFlag(void);
     Request& getRequest();
     Response& getResponse();
 };
