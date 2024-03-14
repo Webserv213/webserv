@@ -518,11 +518,16 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
     {
         memset(buf, 0, BUFFER_SIZE);
         *n = read(curr_event->ident, buf, BUFFER_SIZE);
-        buf[*n] = '\0';
-
+        if (BUFFER_SIZE <= *n)
+        {
+            std::cout << "BUFFER_SIZE: " << BUFFER_SIZE << ", read_n :" << *n << std::endl;
+        }
+        if (*n < 0 && (curr_event->flags & EV_EOF))
+            return (CLOSE_CONNECTION);
         if (*n < 0)
             return (READ_ERROR);
-        else if (curr_event->data == *n)
+        buf[*n] = '\0';
+        if (curr_event->data == *n)
         {
             addContent(curr_event, buf, *n);
             if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
