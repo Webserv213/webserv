@@ -103,7 +103,7 @@ std::string mySubstr(std::string::iterator start, std::string::iterator end)
 bool isFileOrDirectory(const char* path)
 {
     struct stat fileInfo;
-    std::cout << "path: " << path << "\n";
+    // std::cout << "path: " << path << "\n";
     if (stat(path, &fileInfo) != 0) {
         // stat 호출이 실패한 경우
         throw(std::runtime_error("file error(isFileOrDirectory)"));

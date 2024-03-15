@@ -3,12 +3,80 @@
 
 KeventHandler::KeventHandler(Http &http): http_(http)
 {
-
+    setMimeType();
 }
 
 KeventHandler::~KeventHandler()
 {
 
+}
+
+void KeventHandler::setMimeType()
+{
+    mime_type_["html"] = "text/html";
+    mime_type_["htm"] = "text/html";
+    mime_type_["shtml"] = "text/html";
+    mime_type_["css"] = "text/css";
+    mime_type_["xml"] = "text/xml";
+    mime_type_["rss"] = "text/xml";
+    mime_type_["gif"] = "image/gif";
+    mime_type_["jpeg"] = "image/jpeg";
+    mime_type_["jpg"] = "image/jpeg";
+    mime_type_["js"] = "application/x-javascript";
+    mime_type_["txt"] = "text/plain";
+    mime_type_["htc"] = "text/x-component";
+    mime_type_["mml"] = "text/mathml";
+    mime_type_["png"] = "image/png";
+    mime_type_["ico"] = "image/x-icon";
+    mime_type_["jng"] = "image/x-jng";
+    mime_type_["wbmp"] = "image/vnd.wap.wbmp";
+    mime_type_["jar"] = "application/java-archive";
+    mime_type_["war"] = "application/java-archive";
+    mime_type_["ear"] = "application/java-archive";
+    mime_type_["hqx"] = "application/mac-binhex40";
+    mime_type_["pdf"] = "application/pdf";
+    mime_type_["cco"] = "application/x-cocoa";
+    mime_type_["jardiff"] = "application/x-java-archive-diff";
+    mime_type_["jnlp"] = "application/x-java-jnlp-file";
+    mime_type_["run"] = "application/x-makeself";
+    mime_type_["pl"] = "application/x-perl";
+    mime_type_["pm"] = "application/x-perl";
+    mime_type_["prc"] = "application/x-pilot";
+    mime_type_["pdb"] = "application/x-pilot";
+    mime_type_["rar"] = "application/x-rar-compressed";
+    mime_type_["rpm"] = "application/x-redhat-package-manager";
+    mime_type_["sea"] = "application/x-sea";
+    mime_type_["swf"] = "application/x-shockwave-flash";
+    mime_type_["sit"] = "application/x-stuffit";
+    mime_type_["tcl"] = "application/x-tcl";
+    mime_type_["tk"] = "application/x-tcl";
+    mime_type_["der"] = "application/x-x509-ca-cert";
+    mime_type_["pem"] = "application/x-x509-ca-cert";
+    mime_type_["crt"] = "application/x-x509-ca-cert";
+    mime_type_["xpi"] = "application/x-xpinstall";
+    mime_type_["zip"] = "application/zip";
+    mime_type_["deb"] = "application/octet-stream";
+    mime_type_["bin"] = "application/octet-stream";
+    mime_type_["exe"] = "application/octet-stream";
+    mime_type_["dll"] = "application/octet-stream";
+    mime_type_["dmg"] = "application/octet-stream";
+    mime_type_["eot"] = "application/octet-stream";
+    mime_type_["iso"] = "application/octet-stream";
+    mime_type_["img"] = "application/octet-stream";
+    mime_type_["msi"] = "application/octet-stream";
+    mime_type_["msp"] = "application/octet-stream";
+    mime_type_["msm"] = "application/octet-stream";
+    mime_type_["mp3"] = "audio/mpeg";
+    mime_type_["ra"] = "audio/x-realaudio";
+    mime_type_["mpeg"] = "video/mpeg";
+    mime_type_["mpg"] = "video/mpeg";
+    mime_type_["mov"] = "video/quicktime";
+    mime_type_["flv"] = "video/x-flv";
+    mime_type_["avi"] = "video/x-msvideo";
+    mime_type_["wmv"] = "video/x-ms-wmv";
+    mime_type_["asx"] = "video/x-ms-asf";
+    mime_type_["asf"] = "video/x-ms-asf";
+    mime_type_["mng"] = "video/x-mng";
 }
 
 void    checkRequest(Request &req)
@@ -250,24 +318,81 @@ void KeventHandler::createResponseAutoindex(int curr_event_fd, std::string file_
     changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[curr_event_fd]);
 }
 
+void KeventHandler::methodPostHandler(Server &server, Request &req, int curr_event_fd)             // =============================================post===================================
+{
+    int fd = 0;
+    bool is_allow_method = false;
+    std::string file_path;
+    size_t size = 0;
+    int loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
+
+    is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
+    if (is_allow_method == true)
+    {
+        // file_path 만들기
+        file_path = server.getLocationBlock(loc_idx).getRoot();
+
+        for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
+        {
+            if (i < size)
+                continue ;
+            file_path += "/";
+            file_path += req.getRequestLine().getRequestTarget()[i];
+        }
+        std::cout << "post file_path: " << file_path.c_str() << "\n";
+        fd = open(file_path.c_str(), O_RDWR | O_CREAT);
+        std::cout << "Post FD: " << fd << "\n";
+        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+        // fd_content_[fd];
+        fd_content_[fd] = stringToCharVector(fd_manager_[curr_event_fd].getRequest().getBody());
+        // std::cout << "========fd_content: " << charVectorToString(fd_content_[curr_event_fd]) << "\n";
+        EventRecorder event_recorder(curr_event_fd);
+        event_recorder.setEventWriteFile(1);
+        fd_manager_[fd] = event_recorder;
+        changeEvents(change_list_, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
+        fd_manager_[curr_event_fd].setEventWriteRes(-1);
+        changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        // changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+        // std::cout << "first Write File Flag: " << fd_manager_[fd].getEventWriteFile() << "\n";
+    }
+    else
+    {
+        fd = open ("./var/www/error/error_405.html", O_RDONLY);
+        // fd 에러처리해야함.
+        if (fd < 0)
+            throw (std::runtime_error("404 OPEN ERROR"));
+        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+        fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("405");
+        fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Method Not Allowed");
+        fd_content_[fd];
+        EventRecorder event_recorder(curr_event_fd);
+        event_recorder.setEventReadFile(1);
+        fd_manager_[fd] = event_recorder;
+        changeEvents(change_list_, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
+        fd_manager_[curr_event_fd].setEventWriteRes(-1);
+    }
+}
+
 void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)
 {
     int fd = 0;
-    bool allow_method = false;
+    bool is_allow_method = false;
     std::string file_path;
 
     if (req.getRequestLine().getRequestTarget().size() != 0 && req.getRequestLine().getRequestTarget()[0] == "favicon.ico")
+    {
         file_path = "./var/www/favicon.ico";
+        is_allow_method = true;
+    }
     else
     {
         int loc_idx = 0;
         size_t size = 0;
 
         loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
-        std::cout << "loc idx: " << loc_idx << "\n";
 
-        allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
-        if (allow_method == true)
+        is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
+        if (is_allow_method == true)
         {
             // file_path 만들기
             file_path = server.getLocationBlock(loc_idx).getRoot();
@@ -312,7 +437,8 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
 
                 }
             }
-            std::cout << "path: " << file_path << "\n";
+            fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("200");
+            fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("OK");
         }
     }
 
@@ -322,9 +448,10 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     // 3. 디렉토리 -> autoindex off -> index.html
     // 4. 아니면 404
 
+
     if (fd_manager_[curr_event_fd].getAutoindexFlag() == -1)
     {
-        if (allow_method == true)
+        if (is_allow_method == true)
         {
             if (fd >= 0)
             {
@@ -334,15 +461,22 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
             if (fd < 0)
             {
                 fd = open("./var/www/error/error_404.html", O_RDONLY);
-                fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+                fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("404");
+                fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Not Found");
                 if (fd < 0)
                     throw (std::runtime_error("404 OPEN ERROR"));
+                fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
             }
         }
         else
         {
             fd = open ("./var/www/error/error_405.html", O_RDONLY);
+            // fd 에러처리해야함.
+            if (fd < 0)
+                throw (std::runtime_error("404 OPEN ERROR"));
             fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+            fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("405");
+            fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Method Not Allowed");
         }
         fd_content_[fd];
         EventRecorder event_recorder(curr_event_fd);
@@ -354,57 +488,83 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 }
 
-void    KeventHandler::createRequest(struct kevent* curr_event)
+void    KeventHandler::createRequest(struct kevent* curr_event)                            // ==============create reques================================================
 {
     Request req;
 
     std::string buf;
     std::istringstream streamLine(charVectorToString(fd_content_[curr_event->ident]));
 
+
     std::getline(streamLine, buf, ' ');
-    req.getRequestLine().setMethod(buf);
+    req.getRequestLine().setMethod(buf);    
     std::getline(streamLine, buf, ' ');
     req.getRequestLine().setRequestTarget(buf);
     std::getline(streamLine, buf);
     req.getRequestLine().setVersion(buf);
 
-    while (std::getline(streamLine, buf, ' '))   //Request Header
+    std::cout << "req" << std::endl;
+    while (std::getline(streamLine, buf))   //Request Header
     {
-        if (buf == "Host:") {
-            std::getline(streamLine, buf);
-            req.getHeaders().setFullPath(buf);
-        }
-        else if (buf == "Accept:")
+        if (buf == "\r")  // \r이 없는 경우 처리해야할지 고민하기
         {
+            std::cout << "---------------" << std::endl;
             std::getline(streamLine, buf);
-            req.getHeaders().setAccept(buf);
+            req.setBody(buf);
         }
-        else if (buf == "Accept-Encoding:")
+        else
         {
-            std::getline(streamLine, buf);
-            req.getHeaders().setAcceptEncoding(buf);
-        }
-        else if (buf == "Accept-Language:")
-        {
-            std::getline(streamLine, buf);
-            req.getHeaders().setAcceptLanguage(buf);
-        }
-        else if (buf == "Connection:")
-        {
-            std::getline(streamLine, buf);
-            req.getHeaders().setConnection(buf);
-        }
-        else if (buf == "Upgrade-Insecure-Requests:")
-        {
-            std::getline(streamLine, buf);
-            req.getHeaders().setUpgradeInsecureRequests(buf);
-        }
-        else if (buf == "User-Agent:")
-        {
-            std::getline(streamLine, buf);
-            req.getHeaders().setUserAgent(buf);
+            std::istringstream streamLine2(buf);
+
+            std::getline(streamLine2, buf, ' ');
+            if (buf == "Host:") {
+                std::getline(streamLine2, buf);
+                std::cout << "buf: " << buf << std::endl;
+                req.getHeaders().setFullPath(buf);
+            }
+            else if (buf == "Accept:")
+            {
+                std::getline(streamLine2, buf);
+                std::cout << "Accept: " << buf << std::endl;
+                req.getHeaders().setAccept(buf);
+            }
+            else if (buf == "Accept-Encoding:")
+            {
+                std::getline(streamLine2, buf);
+                std::cout << "Accept-Encoding: " << buf << std::endl;
+                req.getHeaders().setAcceptEncoding(buf);
+            }
+            else if (buf == "Accept-Language:")
+            {
+                std::getline(streamLine2, buf);
+                std::cout << "Accept-Language: " << buf << std::endl;
+                req.getHeaders().setAcceptLanguage(buf);
+            }
+            else if (buf == "Connection:")
+            {
+                std::getline(streamLine2, buf);
+                req.getHeaders().setConnection(buf);
+            }
+            else if (buf == "Upgrade-Insecure-Requests:")
+            {
+                std::getline(streamLine2, buf);
+                req.getHeaders().setUpgradeInsecureRequests(buf);
+            }
+            else if (buf == "User-Agent:")
+            {
+                std::getline(streamLine2, buf);
+                req.getHeaders().setUserAgent(buf);
+            }
+            else if (buf == "Content-Length:")
+            {
+                std::getline(streamLine2, buf);
+                std::cout << "Content-Length: " << buf << std::endl;
+                int length = std::atoi(&buf[0]);
+                req.getHeaders().setContentLength(length);
+            }
         }
     }
+
     fd_manager_[curr_event->ident].setRequest(req);
 
     std::string url;
@@ -416,7 +576,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)
     }
     else if (req.getRequestLine().getMethod() == "POST")
     {
-        ;
+        methodPostHandler(http_.getServer()[index], req, curr_event->ident);
     }
 }
 
@@ -426,8 +586,8 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     std::string version = fd_manager_[parent_fd].getRequest().getRequestLine().getVersion();
 
     fd_manager_[parent_fd].getResponse().getStatusLine().setVersion(version);
-    fd_manager_[parent_fd].getResponse().getStatusLine().setStatusCode("200");
-    fd_manager_[parent_fd].getResponse().getStatusLine().setStatusText("OK");
+    // fd_manager_[parent_fd].getResponse().getStatusLine().setStatusCode("200");
+    // fd_manager_[parent_fd].getResponse().getStatusLine().setStatusText("OK");
     fd_manager_[parent_fd].getResponse().getHeaders().setServer("default");
     fd_manager_[parent_fd].getResponse().getHeaders().setKeepAlive("timeout=100");
 
@@ -456,7 +616,11 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size() != 0 && fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] == "/favicon.ico")
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(1150));
     else
+    {
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[curr_event->ident].size()));
+        std::cout << "======================data: " << charVectorToString(fd_content_[curr_event->ident]) << "\n";
+        std::cout << "======================size: " << fd_content_[curr_event->ident].size() << "\n";
+    }
 
     std::string file_data(charVectorToString(fd_content_[curr_event->ident]));
     fd_manager_[parent_fd].getResponse().setBody(file_data);
@@ -482,9 +646,32 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     changeEvents(change_list_, parent_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[parent_fd]);
 }
 
+void    KeventHandler::createFile(struct kevent* curr_event)
+{
+    int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
+
+    int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getHeaders().getContentLength());
+    if (n == -1)
+    {
+        std::cerr << "file write error!" << std::endl;
+        // disconnectClient(curr_event->ident);
+        fd_manager_[curr_event->ident].setFdError(1);
+    }
+
+    fd_manager_[parent_fd].getResponse().getStatusLine().setStatusCode("200");
+    fd_manager_[parent_fd].getResponse().getStatusLine().setStatusText("OK");
+    createResponse(curr_event);
+    fd_manager_[curr_event->ident].setEventWriteRes(1);
+
+    fd_content_[curr_event->ident].clear();
+    close(curr_event->ident);
+}
+
+
 void    KeventHandler::sendResponse(struct kevent* curr_event)
 {
     int n = write(curr_event->ident, &(*fd_content_[curr_event->ident].begin()), fd_content_[curr_event->ident].size());
+
     if (n == -1)
     {
         std::cerr << "client write error!" << std::endl;
@@ -518,10 +705,10 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
     {
         memset(buf, 0, BUFFER_SIZE);
         *n = read(curr_event->ident, buf, BUFFER_SIZE);
-        if (BUFFER_SIZE <= *n)
-        {
-            std::cout << "BUFFER_SIZE: " << BUFFER_SIZE << ", read_n :" << *n << std::endl;
-        }
+        // if (BUFFER_SIZE <= *n)
+        // {
+        //     std::cout << "BUFFER_SIZE: " << BUFFER_SIZE << ", read_n :" << *n << std::endl;
+        // }
         if (*n < 0 && (curr_event->flags & EV_EOF))
             return (CLOSE_CONNECTION);
         if (*n < 0)
@@ -553,16 +740,27 @@ int  KeventHandler::writeFdFlag(struct kevent* curr_event)
     // printCharVector(fd_content_[curr_event->ident]);
     if (it != fd_content_.end())
     {
+        // std::cout << "Write file event FD: " << curr_event->ident << "\n";
+        // std::cout << "Write File Flag: " << fd_manager_[curr_event->ident].getEventWriteFile() << "\n";
         if (fd_content_[curr_event->ident].size() != 0 && fd_manager_[curr_event->ident].getEventWriteRes() == 1)
         {
+            std::cout << "SEND_RESONSE\n";
             return (SEND_RESPONSE);
+        }
+        else if (fd_manager_[curr_event->ident].getEventWriteFile() == 1)
+        // else
+        {
+            std::cout << "EDIT_FILE\n";
+
+            return (EDIT_FILE);
         }
         else
         {
-            return (EDIT_FILE);
+            // std::cout << "IDLE\n";
+
+            return (IDLE);
         }
     }
-    std::cout << "write : " << curr_event->flags << "\n";
     return (-1);
 }
 
@@ -578,7 +776,6 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
     }
     else if (curr_event->filter == EVFILT_WRITE)
         return (writeFdFlag(curr_event));
-    std::cout << "ev_flags: " << curr_event->flags << "\n";
     return (-1);
 }
 
@@ -659,16 +856,18 @@ void KeventHandler::runServer(void)
                     break ;
 
                 case EDIT_FILE :
+                    createFile(curr_event);
                     break ;
 
                 case CLOSE_CONNECTION :
                     disconnectClient(curr_event->ident);
                     break ;
 
+                case IDLE :
+                    break ;
+
                 default :
                 {
-                    std::cout << "flag: " << curr_event->flags << "\n";
-                    std::cout << "type: " << event_type << "\n";
                     throw(std::runtime_error("event exception error\n"));
                 }
             }

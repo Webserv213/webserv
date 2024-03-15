@@ -28,7 +28,8 @@ enum EventType
     READ_FINISH_FILE,
     SEND_RESPONSE,
     EDIT_FILE,
-    CLOSE_CONNECTION
+    CLOSE_CONNECTION,
+    IDLE
 };
 
 enum EventRecorderFlag
@@ -45,11 +46,13 @@ private:
     std::vector<uintptr_t>              server_sockets_;
     std::map<int, EventRecorder>        fd_manager_;
     std::map<int, std::vector<char> >   fd_content_;
+    std::map<std::string, std::string>  mime_type_;
     std::vector<struct kevent>          change_list_;
     // event_list의 크기 생각해보기
     struct kevent                       event_list_[EVENT_LIST_SIZE];
     int                                 kq_;
 
+    void    setMimeType();
     void    disconnectClient(int client_fd);
     void    changeEvents(std::vector<struct kevent>& change_list, uintptr_t ident, int16_t filter,
                         uint16_t flags, uint32_t fflags, intptr_t data, void *udata);
@@ -67,14 +70,17 @@ private:
     void    addContent(struct kevent* curr_event, char buf[], int n);
     bool    isSocket(struct kevent* curr_event);
     int     readFdFlag(struct kevent* curr_event, char *buf, int *n);
+    void    createFile(struct kevent* curr_event);
     int     writeFdFlag(struct kevent* curr_event);
 
     bool    checkAccessMethod(std::string method, Location location);
     int     getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *size);
     void    methodGetHandler(Server &server, Request &req, int curr_event_fd);
+    void    methodPostHandler(Server &server, Request &req, int curr_event_fd);
 
     int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);
     std::string makeDirList(std::string file_path);
+
 
 public:
     KeventHandler(Http &http);

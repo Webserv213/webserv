@@ -2,9 +2,9 @@
 
 ResponseLine::ResponseLine(void)
 {
-    version_ = "";
-    status_code_ = "";
-    status_text_ = "";
+    version_ = "HTTP/1.1";
+    status_code_ = "200";
+    status_text_ = "OK";
 }
 
 ResponseLine::~ResponseLine(void)
