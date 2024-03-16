@@ -100,21 +100,22 @@ std::string mySubstr(std::string::iterator start, std::string::iterator end)
     return result_str;
 }
 
-bool isFileOrDirectory(const char* path)
+int isFileOrDirectory(const char* path)
 {
+    std::cout << "path<" << path << ">path" << std::endl;
     struct stat fileInfo;
     // std::cout << "path: " << path << "\n";
     if (stat(path, &fileInfo) != 0) {
         // stat 호출이 실패한 경우
-        throw(std::runtime_error("file error(isFileOrDirectory)"));
+        return (FILE_NOT_FOUND);
     }
 
     if (S_ISREG(fileInfo.st_mode)) {
         // 일반 파일인 경우
-        return true;
+        return IS_FILE;
     } else if (S_ISDIR(fileInfo.st_mode)) {
         // 디렉토리인 경우
-        return false;
+        return IS_DIR;
     }
-    return (false);
+    return (IS_DIR);
 }

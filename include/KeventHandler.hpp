@@ -81,6 +81,20 @@ private:
     int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);
     std::string makeDirList(std::string file_path);
 
+    // method_error
+    void notFound404(int curr_event_fd);
+    void notAllowedMethod405(int curr_event_fd);
+
+    // method_utils
+    void setReadFileEvent(int curr_event_fd, int fd);
+
+    // post_utils
+    std::string createFilePath(Server &server, Request &req, int loc_idx, size_t size);
+    void createFileForPost(int curr_event_fd, std::string file_path);
+
+    // get_utils
+    void getFaviconFile(int curr_event_fd);
+    void addFileName_getFileFd(std::string file_path, Server &server, int loc_idx, int curr_event_fd);
 
 public:
     KeventHandler(Http &http);

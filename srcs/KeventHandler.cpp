@@ -177,17 +177,11 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
 
 int KeventHandler::getServerIndex(Request req)
 {
-    // std::cout << req.getHeaders().getListenPort() << " " << req.getHeaders().getHost() << "\n";
     for (size_t i = 0; i < http_.getServer().size(); i++)
     {
-        // std::cout << "=======get_server" << "\n";
-        // std::cout << http_.getServer()[i].getListenPort() << "\n" << http_.getServer()[i].getServerName() << "\n";
         if (req.getHeaders().getListenPort() == http_.getServer()[i].getListenPort() &&
             req.getHeaders().getHost() == http_.getServer()[i].getServerName())
-        {
-            // std::cout << http_.getServer()[i].getListenPort() << "\n" << http_.getServer()[i].getServerName() << "\n";
             return (i);
-        }
     }
     return (0);
 }
@@ -318,172 +312,189 @@ void KeventHandler::createResponseAutoindex(int curr_event_fd, std::string file_
     changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[curr_event_fd]);
 }
 
-void KeventHandler::methodPostHandler(Server &server, Request &req, int curr_event_fd)             // =============================================post===================================
-{
-    int fd = 0;
-    bool is_allow_method = false;
-    std::string file_path;
-    size_t size = 0;
-    int loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
+// ========================================= method_utils =========================================
 
+std::string KeventHandler::createFilePath(Server &server, Request &req, int loc_idx, size_t size)
+{
+    std::string file_path;
+
+    file_path = server.getLocationBlock(loc_idx).getRoot();
+    for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
+    {
+        if (i < size)
+            continue ;
+        file_path += "/";
+        file_path += req.getRequestLine().getRequestTarget()[i];
+    }
+    return (file_path);
+}
+
+void KeventHandler::setReadFileEvent(int curr_event_fd, int file_fd)
+{
+    fd_content_[file_fd];
+    EventRecorder event_recorder(curr_event_fd);
+    event_recorder.setEventReadFile(1);
+    fd_manager_[file_fd] = event_recorder;        // 파일에 대한 상태값 표시
+    fd_manager_[curr_event_fd].setEventWriteRes(-1);
+    changeEvents(change_list_, file_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[file_fd]);
+}
+
+// void KeventHandler::setWriteFileEvent()
+// {
+
+// }
+
+// ========================================= method_error =========================================
+
+void KeventHandler::notAllowedMethod405(int curr_event_fd)
+{
+    int fd;
+
+    fd = open ("./var/www/error/error_405.html", O_RDONLY);
+    if (fd < 0)  // fd 에러처리해야함.
+        throw (std::runtime_error("405 OPEN ERROR"));
+    fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("405");
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Method Not Allowed");
+
+    setReadFileEvent(curr_event_fd, fd);
+}
+
+void KeventHandler::notFound404(int curr_event_fd)
+{
+    int fd;
+
+    fd = open("./var/www/error/error_404.html", O_RDONLY);
+    if (fd < 0)
+        throw (std::runtime_error("404 OPEN ERROR"));
+    fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("404");
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Not Found");
+
+    setReadFileEvent(curr_event_fd, fd);
+}
+
+// ========================================= post_utils =========================================
+
+void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
+{
+    int fd;
+
+    fd = open(file_path.c_str(), O_RDWR | O_CREAT);
+    fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+    fd_content_[fd] = stringToCharVector(fd_manager_[curr_event_fd].getRequest().getBody());    // fd_content[fd]에 request 받아온 body 넣어주기
+
+    // setWriteFileEvent -> 따로 빼보기
+    EventRecorder event_recorder(curr_event_fd);
+    event_recorder.setEventWriteFile(1);
+    fd_manager_[fd] = event_recorder;
+    changeEvents(change_list_, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
+    fd_manager_[curr_event_fd].setEventWriteRes(-1);
+    changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+    // changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+}
+
+// ========================================= post_method =========================================
+
+void KeventHandler::methodPostHandler(Server &server, Request &req, int curr_event_fd)
+{
+    size_t  size;
+    int     loc_idx;
+    bool    is_allow_method;
+
+    size = 0;
+    loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
     is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
     if (is_allow_method == true)
     {
-        // file_path 만들기
-        file_path = server.getLocationBlock(loc_idx).getRoot();
+        std::string file_path;
 
-        for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
-        {
-            if (i < size)
-                continue ;
-            file_path += "/";
-            file_path += req.getRequestLine().getRequestTarget()[i];
-        }
-        std::cout << "post file_path: " << file_path.c_str() << "\n";
-        fd = open(file_path.c_str(), O_RDWR | O_CREAT);
-        std::cout << "Post FD: " << fd << "\n";
-        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-        // fd_content_[fd];
-        fd_content_[fd] = stringToCharVector(fd_manager_[curr_event_fd].getRequest().getBody());
-        // std::cout << "========fd_content: " << charVectorToString(fd_content_[curr_event_fd]) << "\n";
-        EventRecorder event_recorder(curr_event_fd);
-        event_recorder.setEventWriteFile(1);
-        fd_manager_[fd] = event_recorder;
-        changeEvents(change_list_, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
-        fd_manager_[curr_event_fd].setEventWriteRes(-1);
-        changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-        // changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-        // std::cout << "first Write File Flag: " << fd_manager_[fd].getEventWriteFile() << "\n";
+        file_path = createFilePath(server, req, loc_idx, size);
+        createFileForPost(curr_event_fd, file_path);
     }
     else
+        notAllowedMethod405(curr_event_fd);
+}
+
+// ========================================= get_utils =========================================
+
+bool isFaviconReq(Request &req)
+{
+    std::vector<std::string> request_target;
+
+    request_target = req.getRequestLine().getRequestTarget();
+    if (request_target.size() != 0 && request_target[0] == "favicon.ico")
+        return (true);
+    return (false);
+}
+
+void KeventHandler::getFaviconFile(int curr_event_fd)
+{
+    int fd;
+
+    fd = open ("./var/www/favicon.ico", O_RDONLY);
+    if (fd < 0)
+        notFound404(curr_event_fd);
+    else
     {
-        fd = open ("./var/www/error/error_405.html", O_RDONLY);
-        // fd 에러처리해야함.
-        if (fd < 0)
-            throw (std::runtime_error("404 OPEN ERROR"));
         fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-        fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("405");
-        fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Method Not Allowed");
-        fd_content_[fd];
-        EventRecorder event_recorder(curr_event_fd);
-        event_recorder.setEventReadFile(1);
-        fd_manager_[fd] = event_recorder;
-        changeEvents(change_list_, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
-        fd_manager_[curr_event_fd].setEventWriteRes(-1);
+        setReadFileEvent(curr_event_fd, fd);
     }
 }
 
-void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)
+int autoIndexStatus(Server &server, int loc_idx)
 {
-    int fd = 0;
-    bool is_allow_method = false;
-    std::string file_path;
+    if (server.getLocationBlock(loc_idx).getAutoIndex() == true)
+        return (ON);
+    return (OFF);
+}
 
-    if (req.getRequestLine().getRequestTarget().size() != 0 && req.getRequestLine().getRequestTarget()[0] == "favicon.ico")
-    {
-        file_path = "./var/www/favicon.ico";
-        is_allow_method = true;
-    }
+void KeventHandler::addFileName_getFileFd(std::string file_path, Server &server, int loc_idx, int curr_event_fd)
+{
+    int fd;
+
+    file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
+    fd = open (file_path.c_str(), O_RDONLY);
+    if (fd < 0)
+        notFound404(curr_event_fd);
     else
     {
-        int loc_idx = 0;
-        size_t size = 0;
+        fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+        setReadFileEvent(curr_event_fd, fd);
+    }
+}
 
+// ========================================= get_method =========================================
+
+void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)    // autoIndexFlag 필요없음
+{
+    int         loc_idx;
+    size_t      size;
+    std::string file_path;
+    bool        is_allow_method = false;
+    int         file_type;
+
+    if (isFaviconReq(req))
+        getFaviconFile(curr_event_fd);
+    else                                  // isGetReq
+    {
+        size = 0;
         loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
-
         is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
         if (is_allow_method == true)
         {
-            // file_path 만들기
-            file_path = server.getLocationBlock(loc_idx).getRoot();
+            file_path = createFilePath(server, req, loc_idx, size);
+            file_type = isFileOrDirectory(file_path.c_str());
 
-            for (size_t i = 0; i < req.getRequestLine().getRequestTarget().size(); i++)
-            {
-                if (i < size)
-                    continue ;
-                file_path += "/";
-                file_path += req.getRequestLine().getRequestTarget()[i];
-            }
-            if (isFileOrDirectory(file_path.c_str()))
-            {
-                std::cout << "File" << std::endl;
-            }
-            else
-            {
-                std::cout << "directory" << std::endl;
-                // autoindex off
-                if (server.getLocationBlock(loc_idx).getAutoIndex() == false)   // default 이거나 autoindex off
-                {
-                    // file_path += "/index.html";
-                     file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
-                }
-                else  // autoindex on
-                {
-
-                    // std::string buf = makeDirList(file_path);
-
-                    // std::ofstream file("./var/www/tmp/dirlist");
-                    // if (file.is_open())
-                    // {
-                    //     file << buf;
-                    //     file.close();
-                    // }
-                    // file_path = "./var/www/tmp/dirlist";
-
-                    //autoindex flag;
-                    fd_manager_[curr_event_fd].setAutoindexFlag(1);
-                    createResponseAutoindex(curr_event_fd, file_path);
-                    printCharVector(fd_content_[curr_event_fd]);
-
-                }
-            }
-            fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("200");
-            fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("OK");
-        }
-    }
-
-    // location
-    // 1. target 확인해서 locaion 길이 제일 맞는거
-    // 2. 디렉토리 -> autoindex on -> autoindex
-    // 3. 디렉토리 -> autoindex off -> index.html
-    // 4. 아니면 404
-
-
-    if (fd_manager_[curr_event_fd].getAutoindexFlag() == -1)
-    {
-        if (is_allow_method == true)
-        {
-            if (fd >= 0)
-            {
-                fd = open (file_path.c_str(), O_RDONLY);
-                fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-            }
-            if (fd < 0)
-            {
-                fd = open("./var/www/error/error_404.html", O_RDONLY);
-                fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("404");
-                fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Not Found");
-                if (fd < 0)
-                    throw (std::runtime_error("404 OPEN ERROR"));
-                fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-            }
+            if (file_type == IS_DIR && autoIndexStatus(server, loc_idx) == OFF)
+                addFileName_getFileFd(file_path, server, loc_idx, curr_event_fd);
+            else if (file_type == IS_DIR && autoIndexStatus(server, loc_idx) == ON)
+                createResponseAutoindex(curr_event_fd, file_path);
+            else if (file_type == FILE_NOT_FOUND)
+                notFound404(curr_event_fd);
         }
         else
-        {
-            fd = open ("./var/www/error/error_405.html", O_RDONLY);
-            // fd 에러처리해야함.
-            if (fd < 0)
-                throw (std::runtime_error("404 OPEN ERROR"));
-            fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-            fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("405");
-            fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Method Not Allowed");
-        }
-        fd_content_[fd];
-        EventRecorder event_recorder(curr_event_fd);
-        event_recorder.setEventReadFile(1);
-        fd_manager_[fd] = event_recorder;
-        changeEvents(change_list_, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
-        fd_manager_[curr_event_fd].setEventWriteRes(-1);
+            notAllowedMethod405(curr_event_fd);
     }
     changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 }
@@ -497,7 +508,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)                 
 
 
     std::getline(streamLine, buf, ' ');
-    req.getRequestLine().setMethod(buf);    
+    req.getRequestLine().setMethod(buf);
     std::getline(streamLine, buf, ' ');
     req.getRequestLine().setRequestTarget(buf);
     std::getline(streamLine, buf);
@@ -616,11 +627,7 @@ void KeventHandler::createResponse(struct kevent* curr_event)
     if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size() != 0 && fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] == "/favicon.ico")
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(1150));
     else
-    {
         fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[curr_event->ident].size()));
-        std::cout << "======================data: " << charVectorToString(fd_content_[curr_event->ident]) << "\n";
-        std::cout << "======================size: " << fd_content_[curr_event->ident].size() << "\n";
-    }
 
     std::string file_data(charVectorToString(fd_content_[curr_event->ident]));
     fd_manager_[parent_fd].getResponse().setBody(file_data);
@@ -705,10 +712,6 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
     {
         memset(buf, 0, BUFFER_SIZE);
         *n = read(curr_event->ident, buf, BUFFER_SIZE);
-        // if (BUFFER_SIZE <= *n)
-        // {
-        //     std::cout << "BUFFER_SIZE: " << BUFFER_SIZE << ", read_n :" << *n << std::endl;
-        // }
         if (*n < 0 && (curr_event->flags & EV_EOF))
             return (CLOSE_CONNECTION);
         if (*n < 0)
@@ -721,7 +724,6 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
             {
                 if (fd_content_[curr_event->ident].size() != 0)
                     return (READ_FINISH_REQUEST);
-
             }
             else
                 return (READ_FINISH_FILE);
@@ -737,29 +739,15 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
 int  KeventHandler::writeFdFlag(struct kevent* curr_event)
 {
     std::map<int, std::vector<char> >::iterator it = fd_content_.find(curr_event->ident);
-    // printCharVector(fd_content_[curr_event->ident]);
     if (it != fd_content_.end())
     {
-        // std::cout << "Write file event FD: " << curr_event->ident << "\n";
-        // std::cout << "Write File Flag: " << fd_manager_[curr_event->ident].getEventWriteFile() << "\n";
         if (fd_content_[curr_event->ident].size() != 0 && fd_manager_[curr_event->ident].getEventWriteRes() == 1)
-        {
-            std::cout << "SEND_RESONSE\n";
             return (SEND_RESPONSE);
-        }
         else if (fd_manager_[curr_event->ident].getEventWriteFile() == 1)
         // else
-        {
-            std::cout << "EDIT_FILE\n";
-
             return (EDIT_FILE);
-        }
         else
-        {
-            // std::cout << "IDLE\n";
-
             return (IDLE);
-        }
     }
     return (-1);
 }
