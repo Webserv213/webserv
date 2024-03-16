@@ -453,7 +453,9 @@ void KeventHandler::addFileName_getFileFd(std::string file_path, Server &server,
 {
     int fd;
 
-    file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
+    (void)server;
+    (void)loc_idx;
+    // file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
     fd = open (file_path.c_str(), O_RDONLY);
     if (fd < 0)
         notFound404(curr_event_fd);
@@ -487,9 +489,14 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
             file_type = isFileOrDirectory(file_path.c_str());
 
             if (file_type == IS_DIR && autoIndexStatus(server, loc_idx) == OFF)
+            {
+                file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
                 addFileName_getFileFd(file_path, server, loc_idx, curr_event_fd);
+            }
             else if (file_type == IS_DIR && autoIndexStatus(server, loc_idx) == ON)
                 createResponseAutoindex(curr_event_fd, file_path);
+            else if (file_type == IS_FILE)
+                addFileName_getFileFd(file_path, server, loc_idx, curr_event_fd);
             else if (file_type == FILE_NOT_FOUND)
                 notFound404(curr_event_fd);
         }
@@ -506,6 +513,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)                 
     std::string buf;
     std::istringstream streamLine(charVectorToString(fd_content_[curr_event->ident]));
 
+    // std::cout << "request : [" << charVectorToString(fd_content_[curr_event->ident]) << "]" << std::endl;
 
     std::getline(streamLine, buf, ' ');
     if ((buf == "GET" || buf == "POST" || buf == "DELETE" || buf == "PUT") == false)
@@ -520,12 +528,12 @@ void    KeventHandler::createRequest(struct kevent* curr_event)                 
     std::getline(streamLine, buf);
     req.getRequestLine().setVersion(buf);
 
-    std::cout << "req" << std::endl;
+    // std::cout << "req" << std::endl;
     while (std::getline(streamLine, buf))   //Request Header
     {
         if (buf == "\r")  // \r이 없는 경우 처리해야할지 고민하기
         {
-            std::cout << "---------------" << std::endl;
+            // std::cout << "---------------" << std::endl;
             std::getline(streamLine, buf);
             req.setBody(buf);
         }
@@ -536,25 +544,25 @@ void    KeventHandler::createRequest(struct kevent* curr_event)                 
             std::getline(streamLine2, buf, ' ');
             if (buf == "Host:") {
                 std::getline(streamLine2, buf);
-                std::cout << "buf: " << buf << std::endl;
+                // std::cout << "buf: " << buf << std::endl;
                 req.getHeaders().setFullPath(buf);
             }
             else if (buf == "Accept:")
             {
                 std::getline(streamLine2, buf);
-                std::cout << "Accept: " << buf << std::endl;
+                // std::cout << "Accept: " << buf << std::endl;
                 req.getHeaders().setAccept(buf);
             }
             else if (buf == "Accept-Encoding:")
             {
                 std::getline(streamLine2, buf);
-                std::cout << "Accept-Encoding: " << buf << std::endl;
+                // std::cout << "Accept-Encoding: " << buf << std::endl;
                 req.getHeaders().setAcceptEncoding(buf);
             }
             else if (buf == "Accept-Language:")
             {
                 std::getline(streamLine2, buf);
-                std::cout << "Accept-Language: " << buf << std::endl;
+                // std::cout << "Accept-Language: " << buf << std::endl;
                 req.getHeaders().setAcceptLanguage(buf);
             }
             else if (buf == "Connection:")
@@ -575,7 +583,7 @@ void    KeventHandler::createRequest(struct kevent* curr_event)                 
             else if (buf == "Content-Length:")
             {
                 std::getline(streamLine2, buf);
-                std::cout << "Content-Length: " << buf << std::endl;
+                // std::cout << "Content-Length: " << buf << std::endl;
                 int length = std::atoi(&buf[0]);
                 req.getHeaders().setContentLength(length);
             }
@@ -718,6 +726,14 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
     {
         memset(buf, 0, BUFFER_SIZE);
         *n = read(curr_event->ident, buf, BUFFER_SIZE);
+        if (*n > 0)
+        {
+            if (fd_manager_[curr_event->ident].getEventReadFile() == 1)
+                // std::cout << "file : [" << buf << "]" << std::endl;
+                ;
+            else
+                std::cout << "request : [[[[[" << buf << "]]]]]]" << std::endl << std::endl;
+        }
         if (*n < 0 && (curr_event->flags & EV_EOF))
             return (CLOSE_CONNECTION);
         if (*n < 0)

@@ -102,7 +102,7 @@ std::string mySubstr(std::string::iterator start, std::string::iterator end)
 
 int isFileOrDirectory(const char* path)
 {
-    std::cout << "path<" << path << ">path" << std::endl;
+    // std::cout << "path<" << path << ">path" << std::endl;
     struct stat fileInfo;
     // std::cout << "path: " << path << "\n";
     if (stat(path, &fileInfo) != 0) {
