@@ -508,6 +508,12 @@ void    KeventHandler::createRequest(struct kevent* curr_event)                 
 
 
     std::getline(streamLine, buf, ' ');
+    if ((buf == "GET" || buf == "POST" || buf == "DELETE" || buf == "PUT") == false)
+    {
+        notAllowedMethod405(curr_event->ident);
+        changeEvents(change_list_, curr_event->ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        return ;
+    }
     req.getRequestLine().setMethod(buf);
     std::getline(streamLine, buf, ' ');
     req.getRequestLine().setRequestTarget(buf);
