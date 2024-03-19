@@ -682,10 +682,6 @@ void    KeventHandler::createFile(struct kevent* curr_event)
     fd_manager_[parent_fd].getResponse().getStatusLine().setStatusCode("200");
     fd_manager_[parent_fd].getResponse().getStatusLine().setStatusText("OK");
     createResponse(curr_event);
-    fd_manager_[curr_event->ident].setEventWriteRes(1);
-
-    fd_content_[curr_event->ident].clear();
-    close(curr_event->ident);
 }
 
 
