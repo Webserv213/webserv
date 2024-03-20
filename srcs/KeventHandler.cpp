@@ -808,6 +808,14 @@ void KeventHandler::clientReadError(struct kevent* curr_event)
 void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
 {
     fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
+
+    // 플래그 이름 : f
+    // cr lf cr lf
+    // crlf나올때가지 받는 거 -> f: 5
+    // 헤더 파싱 해주고 -> content-lengthㄹ가 있으면 f: 6, chuncked 이면 f: 7
+
+    // 만약 위에서 crlfcrlf 나왔으면 -> 헤더 파싱하는 ENUM 반환 (밑에서 case 문 추가)
+    // 
 }
 
 void KeventHandler::runServer(void)
