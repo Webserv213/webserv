@@ -508,91 +508,10 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
 
 void    KeventHandler::createRequest(struct kevent* curr_event)                            // ==============create reques================================================
 {
+    std::string url;
     Request req;
 
-    std::string buf;
-    std::istringstream streamLine(charVectorToString(fd_content_[curr_event->ident]));
-
-    // std::cout << "request : [" << charVectorToString(fd_content_[curr_event->ident]) << "]" << std::endl;
-
-    std::getline(streamLine, buf, ' ');
-    if ((buf == "GET" || buf == "POST" || buf == "DELETE" || buf == "PUT") == false)
-    {
-        notAllowedMethod405(curr_event->ident);
-        changeEvents(change_list_, curr_event->ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-        return ;
-    }
-    req.getRequestLine().setMethod(buf);
-    std::getline(streamLine, buf, ' ');
-    req.getRequestLine().setRequestTarget(buf);
-    std::getline(streamLine, buf);
-    req.getRequestLine().setVersion(buf);
-
-    // std::cout << "req" << std::endl;
-    while (std::getline(streamLine, buf))   //Request Header
-    {
-        if (buf == "\r")  // \r이 없는 경우 처리해야할지 고민하기
-        {
-            // std::cout << "---------------" << std::endl;
-            std::getline(streamLine, buf);
-            req.setBody(buf);
-        }
-        else
-        {
-            std::istringstream streamLine2(buf);
-
-            std::getline(streamLine2, buf, ' ');
-            if (buf == "Host:") {
-                std::getline(streamLine2, buf);
-                // std::cout << "buf: " << buf << std::endl;
-                req.getHeaders().setFullPath(buf);
-            }
-            else if (buf == "Accept:")
-            {
-                std::getline(streamLine2, buf);
-                // std::cout << "Accept: " << buf << std::endl;
-                req.getHeaders().setAccept(buf);
-            }
-            else if (buf == "Accept-Encoding:")
-            {
-                std::getline(streamLine2, buf);
-                // std::cout << "Accept-Encoding: " << buf << std::endl;
-                req.getHeaders().setAcceptEncoding(buf);
-            }
-            else if (buf == "Accept-Language:")
-            {
-                std::getline(streamLine2, buf);
-                // std::cout << "Accept-Language: " << buf << std::endl;
-                req.getHeaders().setAcceptLanguage(buf);
-            }
-            else if (buf == "Connection:")
-            {
-                std::getline(streamLine2, buf);
-                req.getHeaders().setConnection(buf);
-            }
-            else if (buf == "Upgrade-Insecure-Requests:")
-            {
-                std::getline(streamLine2, buf);
-                req.getHeaders().setUpgradeInsecureRequests(buf);
-            }
-            else if (buf == "User-Agent:")
-            {
-                std::getline(streamLine2, buf);
-                req.getHeaders().setUserAgent(buf);
-            }
-            else if (buf == "Content-Length:")
-            {
-                std::getline(streamLine2, buf);
-                // std::cout << "Content-Length: " << buf << std::endl;
-                int length = std::atoi(&buf[0]);
-                req.getHeaders().setContentLength(length);
-            }
-        }
-    }
-
-    fd_manager_[curr_event->ident].setRequest(req);
-
-    std::string url;
+    req = fd_manager_[curr_event->ident].getRequest();
     int index = getServerIndex(req);
 
     if (req.getRequestLine().getMethod() == "GET")
@@ -706,22 +625,208 @@ void    KeventHandler::sendResponse(struct kevent* curr_event)
     }
 }
 
-bool KeventHandler::isSocket(struct kevent* curr_event)
+void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)  
 {
-     for(size_t i = 0; i < server_sockets_.size(); i++)
+    Request req;
+
+    std::string buf;
+    std::istringstream streamLine(charVectorToString(fd_content_[curr_event->ident]));
+
+    // std::cout << "request : [" << charVectorToString(fd_content_[curr_event->ident]) << "]" << std::endl;
+
+    std::getline(streamLine, buf, ' ');
+    if ((buf == "GET" || buf == "POST" || buf == "DELETE" || buf == "PUT") == false)
     {
-        if (curr_event->ident == server_sockets_[i])
-            return (true);
+        notAllowedMethod405(curr_event->ident);
+        changeEvents(change_list_, curr_event->ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        return ;
     }
-    return (false);
+    req.getRequestLine().setMethod(buf);
+    std::getline(streamLine, buf, ' ');
+    req.getRequestLine().setRequestTarget(buf);
+    std::getline(streamLine, buf);
+    req.getRequestLine().setVersion(buf);
+
+    // std::cout << "req" << std::endl;
+    while (std::getline(streamLine, buf))   //Request Header
+    {
+        if (buf == "\r")  // \r이 없는 경우 처리해야할지 고민하기
+        {
+            // std::cout << "---------------" << std::endl;
+            std::getline(streamLine, buf);
+            req.setBody(buf);
+        }
+        else
+        {
+            std::istringstream streamLine2(buf);
+
+            std::getline(streamLine2, buf, ' ');
+            if (buf == "Host:") {
+                std::getline(streamLine2, buf);
+                // std::cout << "buf: " << buf << std::endl;
+                req.getHeaders().setFullPath(buf);
+            }
+            else if (buf == "Accept:")
+            {
+                std::getline(streamLine2, buf);
+                // std::cout << "Accept: " << buf << std::endl;
+                req.getHeaders().setAccept(buf);
+            }
+            else if (buf == "Accept-Encoding:")
+            {
+                std::getline(streamLine2, buf);
+                // std::cout << "Accept-Encoding: " << buf << std::endl;
+                req.getHeaders().setAcceptEncoding(buf);
+            }
+            else if (buf == "Accept-Language:")
+            {
+                std::getline(streamLine2, buf);
+                // std::cout << "Accept-Language: " << buf << std::endl;
+                req.getHeaders().setAcceptLanguage(buf);
+            }
+            else if (buf == "Connection:")
+            {
+                std::getline(streamLine2, buf);
+                req.getHeaders().setConnection(buf);
+            }
+            else if (buf == "Upgrade-Insecure-Requests:")
+            {
+                std::getline(streamLine2, buf);
+                req.getHeaders().setUpgradeInsecureRequests(buf);
+            }
+            else if (buf == "User-Agent:")
+            {
+                std::getline(streamLine2, buf);
+                req.getHeaders().setUserAgent(buf);
+            }
+            else if (buf == "Content-Length:")
+            {
+                std::getline(streamLine2, buf);
+                // std::cout << "Content-Length: " << buf << std::endl;
+                int length = std::atoi(&buf[0]);
+                req.getHeaders().setContentLength(length);
+                fd_manager_[curr_event->ident].setReadType(READ_CONTENT_LENGTH_BODY);
+            }
+            else if (buf == "Transfer-Encoding:")
+            {
+                std::getline(streamLine2, buf);
+                // std::cout << "Transfer-Encoding: " << buf << std::endl;
+                req.getHeaders().setTransferEncoding(buf);
+                fd_manager_[curr_event->ident].setReadType(READ_CHUNKED_BODY);
+            }
+        }
+    }
+    fd_manager_[curr_event->ident].setRequest(req);
+}
+
+int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event, char buf[], int n)
+{
+    int res_flag = 0;
+    int i = 0;
+
+    if (fd_manager_[curr_event->ident].getReadType() == READ_HEADER)
+    {
+        // for (int i = 0; i < n; i++)
+        for (i = 0; i < n; i++)
+        {
+            // if (fd_manager_[curr_event->ident].getReadType() != READ_HEADER)
+            // {
+
+            //     fd_content_[curr_event->ident].push_back(buf[i]);
+            //     continue;
+            // }
+
+            if (buf[i] == '\r' && fd_manager_[curr_event->ident].getHeaderEof() == 0)
+                fd_manager_[curr_event->ident].setHeaderEof(1);
+            else if (buf[i] == '\n' && fd_manager_[curr_event->ident].getHeaderEof() == 1)
+                fd_manager_[curr_event->ident].setHeaderEof(2);
+            else if (buf[i] == '\r' && fd_manager_[curr_event->ident].getHeaderEof() == 2)
+                fd_manager_[curr_event->ident].setHeaderEof(3);
+            else if (buf[i] == '\n' && fd_manager_[curr_event->ident].getHeaderEof() == 3)
+                fd_manager_[curr_event->ident].setHeaderEof(4);
+            else
+                fd_manager_[curr_event->ident].setHeaderEof(0);
+                
+            fd_content_[curr_event->ident].push_back(buf[i]);
+            if (fd_manager_[curr_event->ident].getHeaderEof() == 4) // 헤더 끝 읽음
+            {
+                parsingReqStartLineAndHeaders(curr_event);
+                fd_content_[curr_event->ident].clear();
+                break ;
+            }
+        }
+    }
+
+    if (fd_manager_[curr_event->ident].getReadType() == READ_CONTENT_LENGTH_BODY)
+    {
+        for (; i < n; i++)
+        {
+            fd_content_[curr_event->ident].push_back(buf[i]);
+            fd_manager_[curr_event->ident].incContentCurrentReadLength();
+
+            if (fd_manager_[curr_event->ident].getContentCurrentReadLength() == fd_manager_[curr_event->ident].getRequest().getHeaders().getContentLength())
+            {
+                return (READ_FINISH_REQUEST);
+            }
+        }
+    }
+    else if (fd_manager_[curr_event->ident].getReadType() == READ_CHUNKED_BODY)
+    {
+        for (; i < n; i++)
+        {
+            if (buf[i] == '\r' && fd_manager_[curr_event->ident].getChunkedCrLf() == 0)
+                fd_manager_[curr_event->ident].setChunkedCrLf(1);
+            else if (buf[i] == '\n' && fd_manager_[curr_event->ident].getChunkedCrLf() == 1)
+                fd_manager_[curr_event->ident].setChunkedCrLf(2);
+            else
+            {
+                fd_manager_[curr_event->ident].setChunkedCrLf(0);
+                // fd_content_[curr_event->ident].push_back(buf[i]);
+            }
+
+            //chunked_length의 정보를 임시로 저장할 vector_char 활용하기
+            if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_LENGTH)
+            {
+                if (fd_manager_[curr_event->ident].getChunkedCrLf() == 0)
+                    fd_manager_[curr_event->ident].pushbackChunkedLengthTemp(buf[i]);
+                if (fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
+                {
+                    fd_manager_[curr_event->ident].pushbackChunkedLengthTemp('\0');
+                    std::string chunked_length_str = charVectorToString(fd_content_[curr_event->ident]);
+                    fd_manager_[curr_event->ident].setChunkedTotalReadLength(hexToDecimal(chunked_length_str.c_str(), chunked_length_str.size()));
+                    fd_manager_[curr_event->ident].clearChunkedLengthTemp();
+                    fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_DATA);
+                }
+            }
+            else if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA)
+            {
+                ;
+            }
+
+            if (0)
+            {
+                return (READ_FINISH_REQUEST);
+            }
+        }
+    }
+    else {
+        std::cout << "non identify ReadType!!!" << std::endl;
+    }
+    return (IDLE);
+    // 플래그 이름 : f
+    // cr lf cr lf
+    // crlf나올때가지 받는 거 -> f: 5
+    // 헤더 파싱 해주고 -> content-lengthㄹ가 있으면 f: 6, chuncked 이면 f: 7
+
+    // 만약 위에서 crlfcrlf 나왔으면 -> 헤더 파싱하는 ENUM 반환 (밑에서 case 문 추가)
+    // 
 }
 
 int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
 {
     if (fd_content_.find(curr_event->ident) != fd_content_.end())
     {
-        memset(buf, 0, BUFFER_SIZE);
-        *n = read(curr_event->ident, buf, BUFFER_SIZE);
+        *n = read(curr_event->ident, buf, BUFFER_SIZE - 1);
         if (*n > 0)
         {
             if (fd_manager_[curr_event->ident].getEventReadFile() == 1)
@@ -737,14 +842,17 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
         buf[*n] = '\0';
         if (curr_event->data == *n)
         {
-            addContent(curr_event, buf, *n);
             if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
             {
-                if (fd_content_[curr_event->ident].size() != 0)
-                    return (READ_FINISH_REQUEST);
+                return (addSegmentReqAndReadMode(curr_event, buf, *n));
+                // if (fd_content_[curr_event->ident].size() != 0)
+                //     return (READ_FINISH_REQUEST);
             }
             else
+            {
+                addContent(curr_event, buf, *n);
                 return (READ_FINISH_FILE);
+            }
         }
         else
             return (READ_CONTINUE);
@@ -752,6 +860,16 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
     if (curr_event->flags & EV_EOF)
         return (CLOSE_CONNECTION);
     return (-1);
+}
+
+bool KeventHandler::isSocket(struct kevent* curr_event)
+{
+     for(size_t i = 0; i < server_sockets_.size(); i++)
+    {
+        if (curr_event->ident == server_sockets_[i])
+            return (true);
+    }
+    return (false);
 }
 
 int  KeventHandler::writeFdFlag(struct kevent* curr_event)
@@ -808,14 +926,6 @@ void KeventHandler::clientReadError(struct kevent* curr_event)
 void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
 {
     fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
-
-    // 플래그 이름 : f
-    // cr lf cr lf
-    // crlf나올때가지 받는 거 -> f: 5
-    // 헤더 파싱 해주고 -> content-lengthㄹ가 있으면 f: 6, chuncked 이면 f: 7
-
-    // 만약 위에서 crlfcrlf 나왔으면 -> 헤더 파싱하는 ENUM 반환 (밑에서 case 문 추가)
-    // 
 }
 
 void KeventHandler::runServer(void)

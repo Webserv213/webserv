@@ -15,6 +15,7 @@ private:
     unsigned short  listen_port_;
     std::string     upgrade_insecure_requests_;
     std::string     user_agent_;
+    std::string     transfer_encoding_;
 
 public:
     ReqHeaders();
@@ -29,6 +30,7 @@ public:
     void    setFullPath(std::string& host);
     void    setUpgradeInsecureRequests(std::string& upgrade_insecure_requests);
     void    setUserAgent(std::string& user_agent);
+    void    setTransferEncoding(std::string& transfer_encoding);
 
     int             getContentLength();
     std::string     getContentType();
@@ -41,6 +43,7 @@ public:
     std::string     getUrlPostfix();
     std::string     getUpgradeInsecureRequests();
     std::string     getUserAgent();
+    std::string     getTransferEncoding();
 };
 
 #endif

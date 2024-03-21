@@ -119,3 +119,23 @@ int isFileOrDirectory(const char* path)
     }
     return (IS_DIR);
 }
+
+int hexToDecimal(const char buf[], int size)
+{
+    int result = 0; // 결과 값을 저장할 변수
+    for (int i = 0; i < size; ++i) {
+        result *= 16; // 16진수이므로, 이전 결과에 16을 곱함
+
+        if (isdigit(buf[i])) { // 숫자인 경우
+            result += buf[i] - '0';
+        } else if (isalpha(buf[i])) { // 알파벳인 경우 (A-F, a-f)
+            char upper = toupper(buf[i]); // 대문자로 변환
+            result += 10 + (upper - 'A');
+        } else {
+            // 잘못된 문자가 입력되었을 때의 처리
+            std::cerr << "Invalid hexadecimal character: " << buf[i] << std::endl;
+            return -1; // 오류를 나타내는 값 반환
+        }
+    }
+    return result;
+}

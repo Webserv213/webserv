@@ -48,6 +48,8 @@ private:
     std::map<int, std::vector<char> >   fd_content_;
     std::map<std::string, std::string>  mime_type_;
     std::vector<struct kevent>          change_list_;
+    std::vector<char>   chunked_length_temp_;
+    
     // event_list의 크기 생각해보기
     struct kevent                       event_list_[EVENT_LIST_SIZE];
     int                                 kq_;
@@ -80,6 +82,12 @@ private:
 
     int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);
     std::string makeDirList(std::string file_path);
+
+    //event utils
+    int     addSegmentReqAndReadMode(struct kevent* curr_event, char buf[], int n);
+
+    //req parsing utils
+    void    parsingReqStartLineAndHeaders(struct kevent* curr_event);
 
     // method_error
     void notFound404(int curr_event_fd);

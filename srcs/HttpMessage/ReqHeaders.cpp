@@ -120,6 +120,11 @@ void    ReqHeaders::setUserAgent(std::string& user_agent)
     this->user_agent_ = user_agent;
 }
 
+void    ReqHeaders::setTransferEncoding(std::string& transfer_encoding)
+{
+    this->transfer_encoding_ = transfer_encoding;
+}
+
 //getter
 
 int             ReqHeaders::getContentLength()
@@ -175,5 +180,10 @@ std::string     ReqHeaders::getUpgradeInsecureRequests()
 std::string     ReqHeaders::getUserAgent()
 {
     return (user_agent_);
+}
+
+std::string     ReqHeaders::getTransferEncoding()
+{
+    return (transfer_encoding_);
 }
 

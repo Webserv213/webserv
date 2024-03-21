@@ -3,6 +3,7 @@
 
 # include <iostream>
 # include <vector>
+# include <cctype> // isdigit, isalpha 함수 사용을 위함
 
 enum FileCheck
 {
@@ -26,6 +27,6 @@ std::string         checkSemicolon(std::string &str);
 void                getlineSkipDelemeter(std::istringstream& stream_file_contents, std::string& buff, char c);
 std::string         mySubstr(std::string::iterator start, std::string::iterator end);
 int 				isFileOrDirectory(const char* path);
-
+int                 hexToDecimal(const char buf[], int size);
 
 #endif
