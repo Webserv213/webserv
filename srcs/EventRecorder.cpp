@@ -148,7 +148,7 @@ void EventRecorder::clearChunkedLengthTemp(void)
 }
 
 
-void EventRecorder::setRequest(Request& req)
+void EventRecorder::setRequest(Request req)
 {
     req_ = req;
 }

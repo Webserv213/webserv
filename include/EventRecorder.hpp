@@ -9,6 +9,7 @@ enum    ReadType
     READ_HEADER,
     READ_CONTENT_LENGTH_BODY,
     READ_CHUNKED_BODY,
+    NO_EXIST_BODY,
 };
 
 enum    ChunkedFlag
@@ -63,7 +64,7 @@ public:
     void setChunkedDataType(int chunked_data_type);
     void setChunkedCurrentReadLength(int chunked_current_read_length);
     void setChunkedTotalReadLength(int chunked_total_read_length);
-    void setRequest(Request& req);
+    void setRequest(Request req);
     void setResponse(Response& res);
     void setChunkedLengthTemp(std::vector<char> chunked_length_temp);
     void pushbackChunkedLengthTemp(char c);
@@ -84,6 +85,9 @@ public:
     int getChunkedDataType(void);
     int getChunkedCurrentReadLength(void);
     int getChunkedTotalReadLength(void);
+
+    // utils
+    void incChunkedCurrentReadLength(void);
     std::vector<char>& getChunkedLengthTemp();
     Request& getRequest();
     Response& getResponse();

@@ -4,6 +4,7 @@
 # include <iostream>
 # include <vector>
 # include <cctype> // isdigit, isalpha 함수 사용을 위함
+# include <unistd.h>
 
 enum FileCheck
 {
@@ -28,5 +29,6 @@ void                getlineSkipDelemeter(std::istringstream& stream_file_content
 std::string         mySubstr(std::string::iterator start, std::string::iterator end);
 int 				isFileOrDirectory(const char* path);
 int                 hexToDecimal(const char buf[], int size);
+void                reqPrint(char *buf, int n);
 
 #endif

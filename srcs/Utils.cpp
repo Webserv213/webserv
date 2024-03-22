@@ -139,3 +139,16 @@ int hexToDecimal(const char buf[], int size)
     }
     return result;
 }
+
+void reqPrint(char *buf, int n)
+{
+    int i = 0;
+    while (i < n)
+    {
+        if (buf[i] == '\r')
+            write (1, "\\r", 2);
+        else
+            write (1, &buf[i], 1);
+        i++;
+    }
+}
