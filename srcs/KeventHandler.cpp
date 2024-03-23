@@ -619,6 +619,9 @@ void    KeventHandler::sendResponse(struct kevent* curr_event)
 {
     int n = write(curr_event->ident, &(*fd_content_[curr_event->ident].begin()), fd_content_[curr_event->ident].size());
 
+    // std::cout << "res: \n" << charVectorToString(fd_content_[curr_event->ident]) << "\n";
+    std::cout << "status code: " << fd_manager_[curr_event->ident].getResponse().getStatusLine().getStatusCode() << "\n";
+
     if (n == -1)
     {
         std::cerr << "client write error!" << std::endl;
@@ -765,6 +768,7 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event, char buf[
                 std::cout << "----------------hearder eof----------------" << std::endl;
                 parsingReqStartLineAndHeaders(curr_event);
                 fd_content_[curr_event->ident].clear();
+                fd_manager_[curr_event->ident].setHeaderEof(0);
                 break ;
             }
         }
@@ -786,6 +790,10 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event, char buf[
                 
                 if (fd_manager_[curr_event->ident].getContentCurrentReadLength() == fd_manager_[curr_event->ident].getRequest().getHeaders().getContentLength())
                 {
+                    std::string body;
+
+                    body = charVectorToString(fd_content_[curr_event->ident]);
+                    fd_manager_[curr_event->ident].getRequest().setBody(body);
                     fd_manager_[curr_event->ident].setContentCurrentReadLength(0);
                     return (READ_FINISH_REQUEST);
                 }
@@ -824,7 +832,13 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event, char buf[
             else if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA)
             {
                 if (fd_manager_[curr_event->ident].getChunkedTotalReadLength() == 0 && fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
+                {
+                    std::string body;
+
+                    body = charVectorToString(fd_content_[curr_event->ident]);
+                    fd_manager_[curr_event->ident].getRequest().setBody(body);
                     return (READ_FINISH_REQUEST);
+                }
                 if (fd_manager_[curr_event->ident].getContentCurrentReadLength() < fd_manager_[curr_event->ident].getChunkedTotalReadLength())
                 {
                     fd_content_[curr_event->ident].push_back(buf[i]);
@@ -864,28 +878,31 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
             if (fd_manager_[curr_event->ident].getEventReadFile() == 1)
                 // std::cout << "file : [" << buf << "]" << std::endl;
                 ;
-            else
-            {
-                write (1, "req start : [[[[[", sizeof("req start : [[[[["));
-                reqPrint(buf, *n);
-                write (1, "]]]]]\n\n", sizeof("]]]]]\n\n"));
-            }
+            // else
+            // {
+            //     write (1, "req start : [[[[[", sizeof("req start : [[[[["));
+            //     reqPrint(buf, *n);
+            //     write (1, "]]]]]\n\n", sizeof("]]]]]\n\n"));
+            // }
         }
         if (*n < 0 && (curr_event->flags & EV_EOF))
             return (CLOSE_CONNECTION);
         if (*n < 0)
             return (READ_ERROR);
         buf[*n] = '\0';
-        if (curr_event->data == *n)
+        // std::cout << "data size: " << curr_event->data << " n: " << *n << "\n";
+        if (curr_event->data <= *n)
         {
+            // std::cout << "getEventReadFile : " << fd_manager_[curr_event->ident].getEventReadFile() << "\n";
             if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
             {
                 return (addSegmentReqAndReadMode(curr_event, buf, *n));
                 // if (fd_content_[curr_event->ident].size() != 0)
                 //     return (READ_FINISH_REQUEST);
             }
-            else
+            else     // 파일인 경우
             {
+                // std::cout << "addContent func\n";
                 addContent(curr_event, buf, *n);
                 return (READ_FINISH_FILE);
             }
