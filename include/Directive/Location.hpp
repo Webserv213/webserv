@@ -18,6 +18,7 @@ private:
     unsigned long long                  client_max_body_size_;
     std::map<std::string, std::string>  error_page_;
     std::vector<std::string>            access_method_;
+    std::string                         cgi_path_;
 
 public:
     Location();
@@ -31,7 +32,10 @@ public:
     bool                        getAutoIndex();
     unsigned long long          getClientMaxBodySize();
     std::string                 getIndex();
+    std::string                 getCgiPath();
 
+
+    // setter
     void setRoot(std::string &root);
     void setIndex(std::string &index);
     void setAutoIndex(bool flag);
@@ -39,6 +43,7 @@ public:
     void setUrlPostfix(std::string  url_postfix);
     void setAccessMethod(std::string  access_method);
     void setErrorPage(std::string error_code, std::string &path);
+    void setCgiPath(std::string path);
 
 };
 

@@ -29,7 +29,9 @@ enum EventType
     SEND_RESPONSE,
     EDIT_FILE,
     CLOSE_CONNECTION,
-    IDLE
+    IDLE,
+    WRITE_CGI,
+    READ_CGI
 };
 
 enum EventRecorderFlag
@@ -77,8 +79,11 @@ private:
 
     bool    checkAccessMethod(std::string method, Location location);
     int     getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *size);
-    void    methodGetHandler(Server &server, Request &req, int curr_event_fd);
-    void    methodPostHandler(Server &server, Request &req, int curr_event_fd);
+    void    methodGetHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
+    void    methodPostHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
+    void    methodDeleteHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
+    void    executeCgi(struct kevent* curr_event);
+    void    readCgi(struct kevent* curr_event);
 
     int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);
     std::string makeDirList(std::string file_path);
@@ -103,6 +108,7 @@ private:
     // get_utils
     void getFaviconFile(int curr_event_fd);
     void addFileName_getFileFd(std::string file_path, Server &server, int loc_idx, int curr_event_fd);
+    bool checkCgi(std::vector<std::string> loc, std::string extension);
 
 public:
     KeventHandler(Http &http);

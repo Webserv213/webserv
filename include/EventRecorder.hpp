@@ -18,6 +18,11 @@ enum    ChunkedFlag
     CHUNKED_DATA,
 };
 
+enum PipeMode
+{
+    READ_PIPE,
+    WRITE_PIPE,
+};
 
 class EventRecorder
 {
@@ -38,6 +43,11 @@ private:
     int chunked_data_type_;    // chunked data에서 길이인지 데이터인지 확인하는 플래그
     int chunked_current_read_length_;
     int chunekd_total_read_length_;
+    std::string cgi_path_;
+    int cgi_status_;
+    int pipe_[2];
+    int pipe_mode_;
+
     std::vector<char>   chunked_length_temp_;
     Request req_;
     Response res_;
@@ -67,8 +77,10 @@ public:
     void setRequest(Request req);
     void setResponse(Response& res);
     void setChunkedLengthTemp(std::vector<char> chunked_length_temp);
-    void pushbackChunkedLengthTemp(char c);
-    void clearChunkedLengthTemp(void);
+    void setPipe(int idx, int fd);
+    void setCgiStatus(int status);
+    void setCgiPath(std::string path);
+    void setPipeMode(int pipe_mode);
 
     int getEventReadFile(void);
     int getEventWriteRes(void);
@@ -85,8 +97,14 @@ public:
     int getChunkedDataType(void);
     int getChunkedCurrentReadLength(void);
     int getChunkedTotalReadLength(void);
+    int getPipe(int idx);
+    int getCgiStatus(void);
+    std::string getCgiPath(void);
+    int getPipeMode(void);
 
     // utils
+    void pushbackChunkedLengthTemp(char c);
+    void clearChunkedLengthTemp(void);
     void incChunkedCurrentReadLength(void);
     std::vector<char>& getChunkedLengthTemp();
     Request& getRequest();

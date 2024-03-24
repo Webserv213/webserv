@@ -18,6 +18,7 @@ EventRecorder::EventRecorder()
     chunked_data_type_ = CHUNKED_LENGTH;
     chunked_current_read_length_ = 0;
     chunekd_total_read_length_ = 0;
+    pipe_mode_ = -1;
 }
 
 EventRecorder::EventRecorder(int parent_client_fd)
@@ -38,6 +39,7 @@ EventRecorder::EventRecorder(int parent_client_fd)
     chunked_data_type_ = CHUNKED_LENGTH;
     chunked_current_read_length_ = 0;
     chunekd_total_read_length_ = 0;
+    pipe_mode_ = -1;
 }
 
 EventRecorder::~EventRecorder()
@@ -158,6 +160,27 @@ void EventRecorder::setResponse(Response& res)
     res_ = res;
 }
 
+void EventRecorder::setPipe(int idx, int fd)
+{
+    pipe_[idx] = fd;
+}
+
+void EventRecorder::setCgiStatus(int status)
+{
+    cgi_status_ = status;
+}
+
+void EventRecorder::setCgiPath(std::string path)
+{
+    cgi_path_ = path;
+}
+
+void EventRecorder::setPipeMode(int pipe_mode)
+{
+    pipe_mode_ = pipe_mode;
+}
+
+
 // getter
 
 int EventRecorder::getEventReadFile(void)
@@ -235,11 +258,30 @@ int EventRecorder::getChunkedTotalReadLength(void)
     return (chunekd_total_read_length_);
 }
 
+int EventRecorder::getPipe(int idx)
+{
+    return (pipe_[idx]);
+}
+
+int EventRecorder::getCgiStatus(void)
+{
+    return (cgi_status_);
+}
+
+std::string EventRecorder::getCgiPath(void)
+{
+    return (cgi_path_);
+}
+
+int EventRecorder::getPipeMode(void)
+{
+    return (pipe_mode_);
+}
+
 std::vector<char>& EventRecorder::getChunkedLengthTemp()
 {
     return (chunked_length_temp_);
 }
-
 
 Request& EventRecorder::getRequest()
 {

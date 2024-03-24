@@ -25,12 +25,12 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
     getlineSkipDelemeter(stream_file_contents, buff, ' ');
     new_location.setUrlPostfix(buff);
 
-    // 서버 블록 여는 괄호 체크
+    // 로케이션 블록 여는 괄호 체크
     getlineSkipDelemeter(stream_file_contents, buff, ' ');
     if (buff != "{")
         throw (std::runtime_error("Invalid config file contents [location's open bracket error]"));
 
-    // 서버 블록 데이터 저장
+    // 로케이션 블록 데이터 저장
     while (std::getline(stream_file_contents, buff, ' '))
     {
         if (buff == "}")
@@ -85,6 +85,12 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
                     new_location.setAccessMethod(buff);
                 }
             }
+        }
+        else if (buff == "cgi_path")
+        {
+            getlineSkipDelemeter(stream_file_contents, buff, ' ');
+            buff = checkSemicolon(buff);
+            new_location.setCgiPath(buff);
         }
     }
     throw (std::runtime_error("Invalid config file contents [location's close bracket error]"));

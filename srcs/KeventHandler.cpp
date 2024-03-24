@@ -158,7 +158,7 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
         if (curr_event->ident == server_sockets_[i])
         {
             int client_socket = accept(server_sockets_[i], NULL, NULL);
-            if (client_socket == -1)
+            if (client_socket < 0)
                 throw(std::runtime_error("accept() error\n"));
             std::cout << "accept new client: " << client_socket << std::endl;
             fcntl(client_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
@@ -202,16 +202,36 @@ int KeventHandler::compareLocation(std::vector<std::string> t, std::vector<std::
     return (i);
 }
 
+bool KeventHandler::checkCgi(std::vector<std::string> loc, std::string extension)
+{
+    if (loc.size() == 1 && loc[0] == extension)
+        return (true);
+    return (false);
+}
+
 int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *res_same_path_cnt)
 {
     int index = 0;
     size_t same_path_cnt;
 
+    std::string cgi_file_extension = "";
+    size_t size = 0;
+
+    if (request_target.size() > 0 && request_target[request_target.size() - 1].rfind('.') != std::string::npos)
+    {
+        size = request_target[request_target.size() - 1].rfind('.');
+        cgi_file_extension = request_target[request_target.size() - 1].substr(size);
+    }
+
     for (size_t i = 1; i < server.getLocation().size(); i++)
     {
         same_path_cnt = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
+        if (checkCgi(server.getLocation()[i].getUrlPostfix(), cgi_file_extension))
+            return (i);
+        
         if (same_path_cnt == server.getLocation()[i].getUrlPostfix().size())
         {
+            std::cout << "res_same_path_cnt1 : " << res_same_path_cnt << std::endl;
             *res_same_path_cnt = same_path_cnt;
             return (i);
         }
@@ -324,8 +344,10 @@ std::string KeventHandler::createFilePath(Server &server, Request &req, int loc_
         if (i < size)
             continue ;
         file_path += "/";
+        // req.getRequestLine().getRequestTarget()[i] dir 검사하는 로직 (근데 마지막은 파일이어야함) -> 아니면 404 에러 던지기
         file_path += req.getRequestLine().getRequestTarget()[i];
     }
+    std::cout << "createFilePath\n";
     return (file_path);
 }
 
@@ -380,7 +402,10 @@ void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
 {
     int fd;
 
+    std::cout << "file_path :" << file_path << std::endl;
     fd = open(file_path.c_str(), O_RDWR | O_CREAT);
+    if (fd < 0)
+        std::runtime_error("file open [post]");
     fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
     fd_content_[fd] = stringToCharVector(fd_manager_[curr_event_fd].getRequest().getBody());    // fd_content[fd]에 request 받아온 body 넣어주기
 
@@ -391,24 +416,27 @@ void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
     changeEvents(change_list_, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
     fd_manager_[curr_event_fd].setEventWriteRes(-1);
     changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+    std::cout << "createFIlePost\n";
     // changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
 }
 
 // ========================================= post_method =========================================
 
-void KeventHandler::methodPostHandler(Server &server, Request &req, int curr_event_fd)
+void KeventHandler::methodPostHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size)
 {
-    size_t  size;
-    int     loc_idx;
+    // size_t  size;
+    // int     loc_idx;
     bool    is_allow_method;
 
-    size = 0;
-    loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
+    // size = 0;
+    // loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
     is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
     if (is_allow_method == true)
     {
+        std::cout << "allow_method\n";
         std::string file_path;
 
+        std::cout << "size: " << size << "\n";
         file_path = createFilePath(server, req, loc_idx, size);
         createFileForPost(curr_event_fd, file_path);
     }
@@ -468,10 +496,10 @@ void KeventHandler::addFileName_getFileFd(std::string file_path, Server &server,
 
 // ========================================= get_method =========================================
 
-void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd)    // autoIndexFlag 필요없음
+void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size)    // autoIndexFlag 필요없음
 {
-    int         loc_idx;
-    size_t      size;
+    // int         loc_idx;
+    // size_t      size;
     std::string file_path;
     bool        is_allow_method = false;
     int         file_type;
@@ -480,8 +508,8 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
         getFaviconFile(curr_event_fd);
     else                                  // isGetReq
     {
-        size = 0;
-        loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
+        // size = 0;
+        // loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
         is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
         if (is_allow_method == true)
         {
@@ -506,13 +534,42 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
     changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 }
 
+// ========================================= delete_method =========================================
+
+void    KeventHandler::methodDeleteHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size)
+{
+    int     fd;
+    // size_t  size;
+    // int     loc_idx;
+    bool    is_allow_method;
+
+    // size = 0;
+    // loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), server, &size);
+    is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
+    if (is_allow_method == true)
+    {
+        std::string file_path;
+
+        file_path = createFilePath(server, req, loc_idx, size);
+        // file_path 있는지 확인해서 있으면 지우고, 없으면 -> 404
+        fd = open (file_path.c_str(), O_RDONLY);
+        if (fd < 0)
+            notFound404(curr_event_fd);
+        else
+            // 삭제
+            ;
+    }
+    else
+        notAllowedMethod405(curr_event_fd);
+}
+
 void    KeventHandler::createRequest(struct kevent* curr_event)                            // ==============create reques================================================
 {
     std::string url;
     Request req;
     std::string cur_method = fd_manager_[curr_event->ident].getRequest().getRequestLine().getMethod();
 
-    if ((cur_method == "GET" || cur_method == "POST" || cur_method == "DELETE" || cur_method == "PUT") == false)
+    if ((cur_method == "GET" || cur_method == "POST" || cur_method == "DELETE") == false)
     {
         notAllowedMethod405(curr_event->ident);
         changeEvents(change_list_, curr_event->ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
@@ -521,19 +578,47 @@ void    KeventHandler::createRequest(struct kevent* curr_event)                 
 
     req = fd_manager_[curr_event->ident].getRequest();
     int index = getServerIndex(req);
+    size_t size = 0;
+    int loc_idx = getLocationIndex(req.getRequestLine().getRequestTarget(), http_.getServer()[index], &size);
+
+    std::cout << "size: " << size << "\n";
+
+
+    // cgi check
+    // if (http_.getServer()[index].getLocationBlock(loc_idx).getCgiPath() != "")
+    // {
+    //     fd_manager_[curr_event->ident].setCgiPath(http_.getServer()[index].getLocationBlock(loc_idx).getCgiPath());
+    //     // 파이프 열고 write fd 등록
+    //     int fd[2];
+
+    //     pipe(fd);
+    //     EventRecorder pipe_event_recorder(curr_event->ident);
+    //     pipe_event_recorder.setPipeMode(WRITE_PIPE);
+    //     fd_manager_[fd[1]] = pipe_event_recorder;
+    //     pipe_event_recorder.setPipeMode(READ_PIPE);
+    //     fd_manager_[fd[0]] = pipe_event_recorder;
+
+    //     fd_manager_[curr_event->ident].setPipe(0, fd[0]);   // 읽기
+    //     fd_manager_[curr_event->ident].setPipe(1, fd[1]);   // 쓰기
+    //     changeEvents(change_list_, fd_manager_[curr_event->ident].getPipe(1), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    //     // cgi 중이라고 알려주는 플래그 설정
+    //     // fd_manager_[curr_event->ident].setCgiStatus(WRITE_CGI);
+    //     fd_manager_[fd[1]].setCgiStatus(WRITE_CGI);
+    //     changeEvents(change_list_, curr_event->ident , EVFILT_READ, EV_DELETE, 0, 0, NULL);
+    //     return ;
+    // }
 
     if (req.getRequestLine().getMethod() == "GET")
-    {
-        methodGetHandler(http_.getServer()[index], req, curr_event->ident);
-    }
+        methodGetHandler(http_.getServer()[index], req, curr_event->ident, loc_idx, size);
     else if (req.getRequestLine().getMethod() == "POST")
-    {
-        methodPostHandler(http_.getServer()[index], req, curr_event->ident);
-    }
+        methodPostHandler(http_.getServer()[index], req, curr_event->ident, loc_idx, size);
+    else if (req.getRequestLine().getMethod() == "DELETE")
+        methodDeleteHandler(http_.getServer()[index], req, curr_event->ident, loc_idx, size);
 }
 
 void KeventHandler::createResponse(struct kevent* curr_event)
 {
+    std::cout << "createResponse\n";
     int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
     std::string version = fd_manager_[parent_fd].getRequest().getRequestLine().getVersion();
 
@@ -601,8 +686,9 @@ void    KeventHandler::createFile(struct kevent* curr_event)
 {
     int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
 
+    std::cout << "parent fd: " << parent_fd << "\n";
     int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getHeaders().getContentLength());
-    if (n == -1)
+    if (n < 0)
     {
         std::cerr << "file write error!" << std::endl;
         // disconnectClient(curr_event->ident);
@@ -873,18 +959,6 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
     {
         memset(buf, 0, BUFFER_SIZE);
         *n = read(curr_event->ident, buf, BUFFER_SIZE - 1);
-        if (*n > 0)
-        {
-            if (fd_manager_[curr_event->ident].getEventReadFile() == 1)
-                // std::cout << "file : [" << buf << "]" << std::endl;
-                ;
-            // else
-            // {
-            //     write (1, "req start : [[[[[", sizeof("req start : [[[[["));
-            //     reqPrint(buf, *n);
-            //     write (1, "]]]]]\n\n", sizeof("]]]]]\n\n"));
-            // }
-        }
         if (*n < 0 && (curr_event->flags & EV_EOF))
             return (CLOSE_CONNECTION);
         if (*n < 0)
@@ -947,8 +1021,18 @@ int  KeventHandler::writeFdFlag(struct kevent* curr_event)
 
 int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
 {
+    // cgi
+    // int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
+
+    // if (fd_manager_[curr_event->ident].getCgiStatus() == WRITE_CGI)
+    //     return (WRITE_CGI);
+    // else if (fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
+    //     return (READ_CGI);
+
+    // else
     if (curr_event->flags & EV_ERROR)
         return (ERROR);
+    // else if (curr_event->filter == EVFILT_READ || fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
     else if (curr_event->filter == EVFILT_READ)
     {
         if (isSocket(curr_event))
@@ -956,7 +1040,10 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
         return (readFdFlag(curr_event, buf, n));
     }
     else if (curr_event->filter == EVFILT_WRITE)
+    {
+        std::cout << "write flag\n";
         return (writeFdFlag(curr_event));
+    }
     return (-1);
 }
 
@@ -968,6 +1055,7 @@ void KeventHandler::socketError(struct kevent*  curr_event)
             throw(std::runtime_error("server socket error"));
         else
         {
+            std::cout << "curr_event->ident : " << curr_event->ident << std::endl;
             throw(std::runtime_error("client socket error"));
             disconnectClient(curr_event->ident);
         }
@@ -984,6 +1072,69 @@ void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
 {
     fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
 }
+
+void KeventHandler::executeCgi(struct kevent* curr_event) //cgi pipe 쓰기 fd
+{
+    int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
+    // 1. fd[1]에 쓰기 [0]
+    int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getBody().size());
+    if (n < 0)
+        std::runtime_error("cgi write error\n");
+    // close(curr_event->ident);
+    changeEvents(change_list_, curr_event->ident, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+    // 2. fork 떠서 cgi 실행시켜주고 + READ_CGI 플래그 설정
+    // 3. fd[0] READ 이벤트 등록
+
+    pid_t pid;
+
+    pid = fork();
+    if (pid == 0)   // 자식 프로세스 -> 이제 여기서 cgi 호출
+    {
+        // 1. env 설정
+        // REQUEST_METHOD        -> 
+        // SERVER_PROTOCOL
+        // PATH_INFO
+        // CONTENT_LENGTH        -> 
+        char *env[5];
+
+        env[0] = (char *)fd_manager_[parent_fd].getRequest().getRequestLine().getMethod().c_str();
+        env[1] = (char *)fd_manager_[parent_fd].getRequest().getRequestLine().getVersion().c_str();
+        env[2] = const_cast<char *>("/");
+        env[3] = (char *)std::to_string(fd_manager_[parent_fd].getRequest().getBody().size()).c_str();
+        env[4] = 0;
+
+        // 2. execve
+        char *path[2];
+
+        path[0] = (char*)fd_manager_[parent_fd].getCgiPath().c_str();
+        path[1] = 0;
+        dup2(fd_manager_[parent_fd].getPipe(0), 0);
+        dup2(fd_manager_[parent_fd].getPipe(1), 1);
+        close(fd_manager_[parent_fd].getPipe(0));
+        close(fd_manager_[parent_fd].getPipe(1));
+        if (execve((char*)fd_manager_[parent_fd].getCgiPath().c_str(), path, env) < 0)
+            std::runtime_error("error\n");
+    }
+    else
+    {
+        // close(fd_manager_[parent_fd].getPipe(0));
+        close(fd_manager_[parent_fd].getPipe(1));
+
+        fd_manager_[fd_manager_[parent_fd].getPipe(0)].setCgiStatus(READ_CGI);
+        fd_manager_[fd_manager_[parent_fd].getPipe(0)].setEventReadFile(1);   // 이건 파일이다.
+        changeEvents(change_list_, fd_manager_[parent_fd].getPipe(0), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL); 
+    }
+}
+
+// void KeventHandler::readCgi(struct kevent* curr_event)
+// {
+//     int n;
+//     char *buf;
+
+//     memset(buf, 0, BUFFER_SIZE);
+//     n = read(curr_event->ident, buf, BUFFER_SIZE - 1);
+
+// }
 
 void KeventHandler::runServer(void)
 {
@@ -1008,6 +1159,13 @@ void KeventHandler::runServer(void)
 
             switch(event_type)
             {
+                case WRITE_CGI:
+                    executeCgi(curr_event);          // 1. 6번에다가 쓰고, 7번 등록, fork
+                    break ;
+
+                // case READ_CGI:
+                //     readCgi(curr_event);  // 7번 read해서 이거를 뭐 fd_content 에 알맞게 넣고 
+
                 case ERROR :
                     socketError(curr_event);
                     break ;
