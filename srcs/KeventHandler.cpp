@@ -215,19 +215,19 @@ int KeventHandler::getLocationIndex(std::vector<std::string> request_target, Ser
     size_t same_path_cnt;
 
     std::string cgi_file_extension = "";
-    size_t size = 0;
+    // size_t size = 0;
 
-    if (request_target.size() > 0 && request_target[request_target.size() - 1].rfind('.') != std::string::npos)
-    {
-        size = request_target[request_target.size() - 1].rfind('.');
-        cgi_file_extension = request_target[request_target.size() - 1].substr(size);
-    }
+    // if (request_target.size() > 0 && request_target[request_target.size() - 1].rfind('.') != std::string::npos)
+    // {
+    //     size = request_target[request_target.size() - 1].rfind('.');
+    //     cgi_file_extension = request_target[request_target.size() - 1].substr(size);
+    // }
 
     for (size_t i = 1; i < server.getLocation().size(); i++)
     {
         same_path_cnt = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
-        if (checkCgi(server.getLocation()[i].getUrlPostfix(), cgi_file_extension))
-            return (i);
+        // if (checkCgi(server.getLocation()[i].getUrlPostfix(), cgi_file_extension))
+        //     return (i);
         
         if (same_path_cnt == server.getLocation()[i].getUrlPostfix().size())
         {
@@ -484,6 +484,7 @@ void KeventHandler::addFileName_getFileFd(std::string file_path, Server &server,
     (void)server;
     (void)loc_idx;
     // file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
+    // std::cout << "file_path: " << file_path << std::endl;
     fd = open (file_path.c_str(), O_RDONLY);
     if (fd < 0)
         notFound404(curr_event_fd);
