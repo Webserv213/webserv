@@ -167,7 +167,7 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
             EventRecorder st;
             fd_manager_[client_socket] = st;
             changeEvents(change_list_, client_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[client_socket]);
-            changeEvents(change_list_, client_socket, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[client_socket]);
+            // changeEvents(change_list_, client_socket, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[client_socket]);
             fd_content_[client_socket];
             result = true;
         }
@@ -990,8 +990,14 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
     std::cout << "cur_fd: " << curr_event->ident << "\n";
     std::cout << "flag: " << fd_manager_[curr_event->ident].getCgiStatus() << "\n";
 
-    // if ((fd_manager_[curr_event->ident].getCgiStatus() == -1) && ((int)curr_event->ident == fd_manager_[fd_manager_[curr_event->ident].getParentClientFd()].getPipe(1)))
+    // if (fd_manager_[curr_event->ident].getCgiStatus() == DONE_CGI)
     //     return (IDLE);
+
+    if (fd_manager_.find(curr_event->ident) == fd_manager_.end())
+        return (IDLE);
+    else
+        std::cout << "exist fd : " << curr_event->ident << std::endl;
+
     // cgi
     if (fd_manager_[curr_event->ident].getCgiStatus() == WRITE_CGI)
         return (WRITE_CGI);
@@ -1116,23 +1122,25 @@ void KeventHandler::executeCgi(struct kevent* curr_event) //cgi pipe 쓰기 fd
     }
     else
     {
-
-        // close(fd_manager_[parent_fd].getPipe(0));
         changeEvents(change_list_, curr_event->ident , EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         close(curr_event->ident);
+        // fd_manager_[curr_event->ident].setCgiStatus(DONE_CGI);
         fd_manager_.erase(curr_event->ident);
 
         changeEvents(change_list_, fd_manager_[parent_fd].getSendPipe(0) , EVFILT_READ, EV_DELETE, 0, 0, NULL);
         close(fd_manager_[parent_fd].getSendPipe(0));
+        // fd_manager_[fd_manager_[parent_fd].getSendPipe(0)].setCgiStatus(DONE_CGI);
         fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(0));
 
         changeEvents(change_list_, fd_manager_[parent_fd].getReceivePipe(1), EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         close(fd_manager_[parent_fd].getReceivePipe(1));
+        // fd_manager_[fd_manager_[parent_fd].getReceivePipe(1)].setCgiStatus(DONE_CGI);
         fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(1));
 
         waitpid(-1, 0, 0);
         fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setCgiStatus(READ_CGI);
         fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setEventReadFile(1);   // 이건 파일이다.
+        fd_content_[fd_manager_[parent_fd].getReceivePipe(0)];
         changeEvents(change_list_, fd_manager_[parent_fd].getReceivePipe(0), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
         std::cout << "run!\n";
     }
@@ -1146,8 +1154,12 @@ int KeventHandler::transferFd(uintptr_t fd)
         int parent_fd;
 
         parent_fd = fd_manager_[fd].getParentClientFd();
-        fd_manager_[fd].setCgiStatus(DONE_CGI);
+        fd_manager_[parent_fd].setCgiStatus(DONE_CGI);
         fd_manager_.erase(fd);
+        // fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(0));
+        // fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(1));
+        // fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(0));
+        // fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(1));
         
         std::cout << "fd: " << fd << " parent fd: " << parent_fd << "\n";
         return (parent_fd);
@@ -1220,7 +1232,7 @@ void KeventHandler::runServer(void)
                     break ;
 
                 case IDLE :
-                    // std::cout << "IDLE" << std::endl;
+                    std::cout << "IDLE" << std::endl;
                     break ;
 
                 default :
