@@ -152,3 +152,13 @@ void reqPrint(char *buf, int n)
         i++;
     }
 }
+
+bool existMethod(std::string method, std::vector<std::string> accessMethod)
+{
+    for(size_t i = 0; i < accessMethod.size(); i++)
+    {
+        if (accessMethod[i] == method)
+            return (true);
+    }
+    return (false);
+}

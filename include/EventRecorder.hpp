@@ -45,7 +45,8 @@ private:
     int chunekd_total_read_length_;
     std::string cgi_path_;
     int cgi_status_;
-    int pipe_[2];
+    int send_pipe_[2];
+    int Receive_pipe_[2];
     int pipe_mode_;
 
     std::vector<char>   chunked_length_temp_;
@@ -77,7 +78,8 @@ public:
     void setRequest(Request req);
     void setResponse(Response& res);
     void setChunkedLengthTemp(std::vector<char> chunked_length_temp);
-    void setPipe(int idx, int fd);
+    void setSendPipe(int idx, int fd);
+    void setReceivePipe(int idx, int fd);
     void setCgiStatus(int status);
     void setCgiPath(std::string path);
     void setPipeMode(int pipe_mode);
@@ -97,7 +99,8 @@ public:
     int getChunkedDataType(void);
     int getChunkedCurrentReadLength(void);
     int getChunkedTotalReadLength(void);
-    int getPipe(int idx);
+    int getSendPipe(int idx);
+    int getReceivePipe(int idx);
     int getCgiStatus(void);
     std::string getCgiPath(void);
     int getPipeMode(void);

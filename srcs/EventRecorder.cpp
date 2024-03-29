@@ -160,9 +160,14 @@ void EventRecorder::setResponse(Response& res)
     res_ = res;
 }
 
-void EventRecorder::setPipe(int idx, int fd)
+void EventRecorder::setSendPipe(int idx, int fd)
 {
-    pipe_[idx] = fd;
+    send_pipe_[idx] = fd;
+}
+
+void EventRecorder::setReceivePipe(int idx, int fd)
+{
+    Receive_pipe_[idx] = fd;
 }
 
 void EventRecorder::setCgiStatus(int status)
@@ -258,9 +263,14 @@ int EventRecorder::getChunkedTotalReadLength(void)
     return (chunekd_total_read_length_);
 }
 
-int EventRecorder::getPipe(int idx)
+int EventRecorder::getSendPipe(int idx)
 {
-    return (pipe_[idx]);
+    return (send_pipe_[idx]);
+}
+
+int EventRecorder::getReceivePipe(int idx)
+{
+    return (Receive_pipe_[idx]);
 }
 
 int EventRecorder::getCgiStatus(void)

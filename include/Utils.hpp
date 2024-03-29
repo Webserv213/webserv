@@ -30,5 +30,6 @@ std::string         mySubstr(std::string::iterator start, std::string::iterator 
 int 				isFileOrDirectory(const char* path);
 int                 hexToDecimal(const char buf[], int size);
 void                reqPrint(char *buf, int n);
+bool existMethod(std::string method, std::vector<std::string> accessMethod);
 
 #endif

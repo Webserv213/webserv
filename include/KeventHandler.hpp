@@ -31,7 +31,9 @@ enum EventType
     CLOSE_CONNECTION,
     IDLE,
     WRITE_CGI,
-    READ_CGI
+    READ_CGI,
+
+    DONE_CGI
 };
 
 enum EventRecorderFlag
@@ -62,7 +64,7 @@ private:
                         uint16_t flags, uint32_t fflags, intptr_t data, void *udata);
     void    initKqueue();
     int     getServerIndex(Request req);
-    void    createRequest(struct kevent* curr_event);
+    void    createRequest(int curr_event);
     void    createResponse(struct kevent* curr_event);
     void    createResponseAutoindex(int curr_event_fd, std::string file_path);
     void    sendResponse(struct kevent* curr_event);
@@ -78,7 +80,7 @@ private:
     int     writeFdFlag(struct kevent* curr_event);
 
     bool    checkAccessMethod(std::string method, Location location);
-    int     getLocationIndex(std::vector<std::string> request_target, Server &server, size_t *size);
+    int     getLocationIndex(Request req, Server &server, size_t *size);
     void    methodGetHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
     void    methodPostHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
     void    methodDeleteHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
@@ -108,7 +110,9 @@ private:
     // get_utils
     void getFaviconFile(int curr_event_fd);
     void addFileName_getFileFd(std::string file_path, Server &server, int loc_idx, int curr_event_fd);
-    bool checkCgi(std::vector<std::string> loc, std::string extension);
+    bool checkCgi(Request req, Location loc, std::string extension);
+
+    int transferFd(uintptr_t fd);
 
 public:
     KeventHandler(Http &http);

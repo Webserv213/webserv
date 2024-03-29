@@ -30,6 +30,8 @@ void    RequestLine::setRequestTarget(std::string& request_target)
 
 void    RequestLine::setVersion(std::string& version)
 {
+    if (version.rfind('\r') != std::string::npos)
+        version.pop_back();
     version_ = version;
 }
 
