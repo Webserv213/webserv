@@ -360,6 +360,7 @@ std::string KeventHandler::createFilePath(Server &server, Request &req, int loc_
 
 void KeventHandler::setReadFileEvent(int curr_event_fd, int file_fd)
 {
+    std::cout << "set read file event\n";
     fd_content_[file_fd];
     EventRecorder event_recorder(curr_event_fd);
     event_recorder.setEventReadFile(1);
@@ -484,13 +485,17 @@ int autoIndexStatus(Server &server, int loc_idx)
 
 void KeventHandler::addFileName_getFileFd(std::string file_path, Server &server, int loc_idx, int curr_event_fd)
 {
+    // 나중에 openFd() 이런 함수로 바꾸고
     int fd;
 
     (void)server;
     (void)loc_idx;
     // file_path += "/" + server.getLocationBlock(loc_idx).getIndex();
-    // std::cout << "file_path: " << file_path << std::endl;
+    std::cout << "file_path: " << file_path << std::endl;
     fd = open (file_path.c_str(), O_RDONLY);
+
+    std::cout << "file fd: " << fd << "\n";
+
     if (fd < 0)
         notFound404(curr_event_fd);
     else
@@ -526,7 +531,10 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
             else if (file_type == IS_DIR && autoIndexStatus(server, loc_idx) == ON)
                 createResponseAutoindex(curr_event_fd, file_path);
             else if (file_type == IS_FILE)
+            {
+                std::cout << "get: is file\n";
                 addFileName_getFileFd(file_path, server, loc_idx, curr_event_fd);
+            }
             else if (file_type == FILE_NOT_FOUND)
                 notFound404(curr_event_fd);
         }
@@ -1024,13 +1032,8 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
     std::cout << "cur_fd: " << curr_event->ident << "\n";
     std::cout << "flag: " << fd_manager_[curr_event->ident].getCgiStatus() << "\n";
 
-    // if (fd_manager_[curr_event->ident].getCgiStatus() == DONE_CGI)
-    //     return (IDLE);
-
     if (fd_manager_.find(curr_event->ident) == fd_manager_.end())
         return (IDLE);
-    else
-        std::cout << "exist fd : " << curr_event->ident << std::endl;
 
     // cgi
     if (fd_manager_[curr_event->ident].getCgiStatus() == WRITE_CGI)
@@ -1040,12 +1043,16 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
         return (ERROR);
     else if (curr_event->filter == EVFILT_READ || fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
     {
+        std::cout << "read fd flag\n";
         if (isSocket(curr_event))
             return (IS_SERVER_SOCKET);
         return (readFdFlag(curr_event, buf, n));
     }
     else if (curr_event->filter == EVFILT_WRITE)
+    {
+        std::cout << "write fd flag\n";
         return (writeFdFlag(curr_event));
+    }
     return (-1);
 }
 
@@ -1072,30 +1079,20 @@ void KeventHandler::clientReadError(struct kevent* curr_event)
 
 void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
 {
+    std::cout << "add content\n";
     fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
 }
 
-void KeventHandler::executeCgi(struct kevent* curr_event) //cgi pipe 쓰기 fd
+//cgi pipe 쓰기 fd
+void KeventHandler::executeCgi(struct kevent* curr_event)
 {
-    fd_manager_[curr_event->ident].setCgiStatus(-1);
-    // changeEvents(change_list_, curr_event->ident, EVFILT_WRITE, EV_DELETE, 0, 0, NULL); 
-
-
     int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
 
-    std::cout << "==========here\n";
-
+    fd_manager_[curr_event->ident].setCgiStatus(-1);
     // 1. fd[1]에 쓰기 [0]
     int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getBody().size());
     if (n < 0)
         std::runtime_error("cgi write error\n");
-
-    std::cout << "===========222222\n";
-
-    // close(curr_event->ident);
-    // changeEvents(change_list_, curr_event->ident, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-    // 2. fork 떠서 cgi 실행시켜주고 + READ_CGI 플래그 설정
-    // 3. fd[0] READ 이벤트 등록
 
     pid_t pid;
     int fd[2];
@@ -1107,22 +1104,11 @@ void KeventHandler::executeCgi(struct kevent* curr_event) //cgi pipe 쓰기 fd
 
     fd_manager_[parent_fd].setReceivePipe(0, fd[0]);   // 읽기
     fd_manager_[parent_fd].setReceivePipe(1, fd[1]);   // 쓰기
-    // changeEvents(change_list_, fd_manager_[curr_event->ident].getReceivePipe(0), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
     fd_manager_[fd[0]].setCgiStatus(READ_CGI);
 
-    std::cout << "send fd[0]: " << fd_manager_[parent_fd].getSendPipe(0) << "\n";
-    std::cout << "send fd[1]: " << fd_manager_[parent_fd].getSendPipe(1) << " " << curr_event->ident << "\n";
-    std::cout << "receive fd[0]: " << fd[0] << "\n";
-    std::cout << "receive fd[1]: " << fd[1] << "\n";
-
     pid = fork();
-    if (pid == 0)   // 자식 프로세스 -> 이제 여기서 cgi 호출
+    if (pid == 0)
     {
-        // 1. env 설정
-        // REQUEST_METHOD        -> 
-        // SERVER_PROTOCOL
-        // PATH_INFO
-        // CONTENT_LENGTH        -> 
         char *env[5];
 
         std::string str0 = "REQUEST_METHOD=" + fd_manager_[parent_fd].getRequest().getRequestLine().getMethod();
@@ -1134,11 +1120,6 @@ void KeventHandler::executeCgi(struct kevent* curr_event) //cgi pipe 쓰기 fd
         env[2] = (char *)str2.c_str();
         env[3] = (char *)str3.c_str();
         env[4] = NULL;
-
-        // std::cout << env[0] << std::endl;
-        // std::cout << env[1] << std::endl;
-        // std::cout << env[2] << std::endl;
-        // std::cout << env[3] << std::endl;
 
         // 2. execve
         char *path[2];
@@ -1156,19 +1137,13 @@ void KeventHandler::executeCgi(struct kevent* curr_event) //cgi pipe 쓰기 fd
     }
     else
     {
-        // changeEvents(change_list_, curr_event->ident , EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         close(curr_event->ident);
-        // fd_manager_[curr_event->ident].setCgiStatus(DONE_CGI);
         fd_manager_.erase(curr_event->ident);
 
-        // changeEvents(change_list_, fd_manager_[parent_fd].getSendPipe(0) , EVFILT_READ, EV_DELETE, 0, 0, NULL);
         close(fd_manager_[parent_fd].getSendPipe(0));
-        // fd_manager_[fd_manager_[parent_fd].getSendPipe(0)].setCgiStatus(DONE_CGI);
         fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(0));
 
-        // changeEvents(change_list_, fd_manager_[parent_fd].getReceivePipe(1), EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         close(fd_manager_[parent_fd].getReceivePipe(1));
-        // fd_manager_[fd_manager_[parent_fd].getReceivePipe(1)].setCgiStatus(DONE_CGI);
         fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(1));
 
         waitpid(-1, 0, 0);
@@ -1192,12 +1167,6 @@ int KeventHandler::transferFd(uintptr_t fd)
         fd_manager_[parent_fd].setCgiStatus(DONE_CGI);
         fd_manager_.erase(fd);
         fd_content_.erase(fd);
-        // fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(0));
-        // fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(1));
-        // fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(0));
-        // fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(1));
-        
-        std::cout << "fd: " << fd << " parent fd: " << parent_fd << "\n";
         return (parent_fd);
     }
     // 아니면 자기 자신 리턴
@@ -1220,15 +1189,6 @@ void KeventHandler::runServer(void)
             throw(std::runtime_error("kevent() error\n"));
 
         change_list_.clear();
-
-        // std::cout << "========================\n";
-        // std::cout << "event size: " << new_events << "\n";
-        // for(int i = 0; i < new_events; i++)
-        // {
-        //     curr_event = &event_list_[i];
-        //     std::cout << "id: " << curr_event->ident << "\n";
-        // }
-
 
         for (int i = 0; i < new_events; ++i)
         {
