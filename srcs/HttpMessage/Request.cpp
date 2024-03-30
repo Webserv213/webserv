@@ -25,9 +25,14 @@ std::string& Request::getBody(void)
     return (body_);
 }
 
-void Request::setBody(std::string& body)
+void Request::addBody(std::string& body)
 {
     body_ += body;
+}
+
+void Request::setBody(std::string& body)
+{
+    body_ = body;
 }
 
 // void Request::methodGetHandler(Server &server, )

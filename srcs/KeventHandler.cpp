@@ -319,7 +319,7 @@ void KeventHandler::createResponseAutoindex(int curr_event_fd, std::string file_
 
     std::string buf = makeDirList(file_path);
     fd_manager_[curr_event_fd].getResponse().getHeaders().setContentLength(std::to_string(buf.size()));
-    fd_manager_[curr_event_fd].getResponse().setBody(buf);
+    fd_manager_[curr_event_fd].getResponse().addBody(buf);
 
     std::string res_tmp;
     res_tmp = "";
@@ -405,7 +405,7 @@ void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
     int fd;
 
     std::cout << "file_path :" << file_path << std::endl;
-    fd = open(file_path.c_str(), O_RDWR | O_CREAT, 0644);
+    fd = open(file_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
     if (fd < 0)
         std::runtime_error("file open [post]");
 
@@ -423,7 +423,7 @@ void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
     if (fd_manager_[curr_event_fd].getCgiStatus() == DONE_CGI)
     {
         std::string str = charVectorToString(fd_content_[fd]);
-        fd_manager_[fd].getRequest().setBody(str);
+        fd_manager_[fd].getRequest().addBody(str);
     }
     changeEvents(change_list_, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, &fd_manager_[fd]);
     fd_manager_[curr_event_fd].setEventWriteRes(-1);
@@ -654,7 +654,7 @@ void KeventHandler::createResponse(struct kevent* curr_event)
 
     if (fd_manager_[parent_fd].getRequest().getRequestLine().getMethod() == "HEAD")
         file_data = "";
-    fd_manager_[parent_fd].getResponse().setBody(file_data);
+    fd_manager_[parent_fd].getResponse().addBody(file_data);
 
     std::string res_tmp;
     res_tmp = "";
@@ -746,7 +746,7 @@ void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)
         {
             // std::cout << "---------------" << std::endl;
             std::getline(streamLine, buf);
-            req.setBody(buf);
+            req.addBody(buf);
         }
         else
         {
@@ -864,7 +864,7 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event, char buf[
                     std::string body;
 
                     body = charVectorToString(fd_content_[curr_event->ident]);
-                    fd_manager_[curr_event->ident].getRequest().setBody(body);
+                    fd_manager_[curr_event->ident].getRequest().addBody(body);
                     fd_manager_[curr_event->ident].setContentCurrentReadLength(0);
                     return (READ_FINISH_REQUEST);
                 }
@@ -904,7 +904,7 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event, char buf[
                     std::string body;
 
                     body = charVectorToString(fd_content_[curr_event->ident]);
-                    fd_manager_[curr_event->ident].getRequest().setBody(body);
+                    fd_manager_[curr_event->ident].getRequest().addBody(body);
                     return (READ_FINISH_REQUEST);
                 }
                 if (fd_manager_[curr_event->ident].getContentCurrentReadLength() < fd_manager_[curr_event->ident].getChunkedTotalReadLength())
@@ -926,6 +926,18 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event, char buf[
         
     }
     return (IDLE);
+}
+
+std::string parsingCgiBody(std::string str)
+{
+    std::string buf;
+    std::istringstream streamLine(str);
+
+    std::getline(streamLine, buf);
+    std::getline(streamLine, buf);
+    std::getline(streamLine, buf);
+    std::getline(streamLine, buf);
+    return (buf);
 }
 
 int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
@@ -954,11 +966,13 @@ int KeventHandler::readFdFlag(struct kevent* curr_event, char *buf, int *n)
                     std::cout << "content: " << charVectorToString(fd_content_[curr_event->ident]) << "\n";
                     fd_manager_[curr_event->ident].setCgiStatus(DONE_CGI);
                     fd_content_[fd_manager_[curr_event->ident].getParentClientFd()] = fd_content_[curr_event->ident];
-                    std::string str = charVectorToString(fd_content_[curr_event->ident]);
+                    // std::string str = charVectorToString(fd_content_[curr_event->ident]);
+
+                    std::string str = parsingCgiBody(charVectorToString(fd_content_[curr_event->ident]));
+
                     fd_manager_[fd_manager_[curr_event->ident].getParentClientFd()].getRequest().setBody(str);
                     close(curr_event->ident);
                     // changeEvents(change_list_, curr_event->ident , EVFILT_READ, EV_DELETE, 0, 0, NULL);
-                    // fd_manager_.erase(curr_event->ident);
 
                     std::cout << "read_cgi parent fd: " << fd_manager_[curr_event->ident].getParentClientFd() << "\n";
                     std::cout << "body: " << fd_manager_[fd_manager_[curr_event->ident].getParentClientFd()].getRequest().getBody() << "\n";
@@ -1177,6 +1191,7 @@ int KeventHandler::transferFd(uintptr_t fd)
         parent_fd = fd_manager_[fd].getParentClientFd();
         fd_manager_[parent_fd].setCgiStatus(DONE_CGI);
         fd_manager_.erase(fd);
+        fd_content_.erase(fd);
         // fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(0));
         // fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(1));
         // fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(0));

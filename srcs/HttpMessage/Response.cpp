@@ -24,7 +24,7 @@ std::vector<char>& Response::getBody(void)
     return(body_);
 }
 
-void    Response::setBody(std::string& body)
+void    Response::addBody(std::string& body)
 {
     for (size_t i = 0; i < body.size(); i++)
         body_.push_back(body[i]);

@@ -19,6 +19,7 @@ public:
     ReqHeaders& getHeaders();
     std::string& getBody();
     void methodGetHandler(Server& server);
+    void addBody(std::string& body);
     void setBody(std::string& body);
     Request();
     ~Request();
