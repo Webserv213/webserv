@@ -64,7 +64,7 @@ private:
                         uint16_t flags, uint32_t fflags, intptr_t data, void *udata);
     void    initKqueue();
     int     getServerIndex(Request req);
-    void    createRequest(int curr_event);
+    void    executeMethod(int curr_event);
     void    createResponse(struct kevent* curr_event);
     void    createResponseAutoindex(int curr_event_fd, std::string file_path);
     void    sendResponse(struct kevent* curr_event);
@@ -117,6 +117,9 @@ private:
     bool checkCgi(Request req, Location loc, std::string extension);
 
     int transferFd(uintptr_t fd);
+    bool isPipeFile(unsigned int file_fd);
+    bool isCgiRequest(int cur_fd, int idx, int loc_idx);
+    bool isRightMethod(Request &req, int cur_fd);
 
     
 
