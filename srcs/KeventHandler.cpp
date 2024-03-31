@@ -1083,18 +1083,52 @@ void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
     fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
 }
 
-//cgi pipe 쓰기 fd
-void KeventHandler::executeCgi(struct kevent* curr_event)
+void KeventHandler::closePipes(int parent_fd)
 {
-    int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
+    close(fd_manager_[parent_fd].getSendPipe(1));
+    fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(1));
 
-    fd_manager_[curr_event->ident].setCgiStatus(-1);
-    // 1. fd[1]에 쓰기 [0]
-    int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getBody().size());
-    if (n < 0)
-        std::runtime_error("cgi write error\n");
+    close(fd_manager_[parent_fd].getSendPipe(0));
+    fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(0));
 
-    pid_t pid;
+    close(fd_manager_[parent_fd].getReceivePipe(1));
+    fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(1));
+}
+
+void KeventHandler::connectPipe(int parent_fd)
+{
+    dup2(fd_manager_[parent_fd].getSendPipe(0), 0);
+    dup2(fd_manager_[parent_fd].getReceivePipe(1), 1);
+    close(fd_manager_[parent_fd].getSendPipe(0));
+    close(fd_manager_[parent_fd].getSendPipe(1));
+    close(fd_manager_[parent_fd].getReceivePipe(0));
+    close(fd_manager_[parent_fd].getReceivePipe(1));
+}
+
+char** KeventHandler::createEnv(int parent_fd)
+{
+    char **env;
+
+    env = new char *[5];
+    std::string str0 = "REQUEST_METHOD=" + fd_manager_[parent_fd].getRequest().getRequestLine().getMethod();
+    std::string str1 = "SERVER_PROTOCOL=" + fd_manager_[parent_fd].getRequest().getRequestLine().getVersion();
+    std::string str2 = "PATH_INFO=/";
+    std::string str3 = "CONTENT_LENGTH=" + std::to_string(fd_manager_[parent_fd].getRequest().getBody().size());
+    env[0] = new char[str0.size() + 1];
+    strcpy(env[0], str0.c_str());
+    env[1] = new char[str1.size() + 1];
+    strcpy(env[1], str1.c_str());
+    env[2] = new char[str2.size() + 1];
+    strcpy(env[2], str2.c_str());
+    env[3] = new char[str3.size() + 1];
+    strcpy(env[3], str3.c_str());
+    env[4] = NULL;
+
+    return (env);
+}
+
+void KeventHandler::createPipe(int parent_fd)
+{
     int fd[2];
 
     pipe(fd);
@@ -1105,49 +1139,37 @@ void KeventHandler::executeCgi(struct kevent* curr_event)
     fd_manager_[parent_fd].setReceivePipe(0, fd[0]);   // 읽기
     fd_manager_[parent_fd].setReceivePipe(1, fd[1]);   // 쓰기
     fd_manager_[fd[0]].setCgiStatus(READ_CGI);
+}
 
+//cgi pipe 쓰기 fd
+void KeventHandler::executeCgi(struct kevent* curr_event)
+{
+    pid_t pid;
+    int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
+
+    fd_manager_[curr_event->ident].setCgiStatus(-1);
+    int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getBody().size());
+    if (n < 0)
+        std::runtime_error("cgi write error\n");
+
+    createPipe(parent_fd);
     pid = fork();
     if (pid == 0)
     {
-        char *env[5];
-
-        std::string str0 = "REQUEST_METHOD=" + fd_manager_[parent_fd].getRequest().getRequestLine().getMethod();
-        std::string str1 = "SERVER_PROTOCOL=" + fd_manager_[parent_fd].getRequest().getRequestLine().getVersion();
-        std::string str2 = "PATH_INFO=/";
-        std::string str3 = "CONTENT_LENGTH=" + std::to_string(fd_manager_[parent_fd].getRequest().getBody().size());
-        env[0] = (char *)str0.c_str();
-        env[1] = (char *)str1.c_str();
-        env[2] = (char *)str2.c_str();
-        env[3] = (char *)str3.c_str();
-        env[4] = NULL;
-
-        // 2. execve
+        char **env;
         char *path[2];
 
+        env = createEnv(parent_fd);
         path[0] = (char*)fd_manager_[parent_fd].getCgiPath().c_str();
         path[1] = 0;
-        dup2(fd_manager_[parent_fd].getSendPipe(0), 0);
-        dup2(fd_manager_[parent_fd].getReceivePipe(1), 1);
-        close(fd_manager_[parent_fd].getSendPipe(0));
-        close(fd_manager_[parent_fd].getSendPipe(1));
-        close(fd_manager_[parent_fd].getReceivePipe(0));
-        close(fd_manager_[parent_fd].getReceivePipe(1));
+        connectPipe(parent_fd);
         if (execve((char*)fd_manager_[parent_fd].getCgiPath().c_str(), path, env) < 0)
             std::runtime_error("error\n");
     }
     else
     {
-        close(curr_event->ident);
-        fd_manager_.erase(curr_event->ident);
-
-        close(fd_manager_[parent_fd].getSendPipe(0));
-        fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(0));
-
-        close(fd_manager_[parent_fd].getReceivePipe(1));
-        fd_manager_.erase(fd_manager_[parent_fd].getReceivePipe(1));
-
+        closePipes(parent_fd);
         waitpid(-1, 0, 0);
-
         fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setCgiStatus(READ_CGI);
         fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setEventReadFile(1);   // 이건 파일이다.
         fd_content_[fd_manager_[parent_fd].getReceivePipe(0)];

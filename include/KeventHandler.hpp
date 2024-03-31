@@ -114,6 +114,12 @@ private:
 
     int transferFd(uintptr_t fd);
 
+    // execveCgi
+    void createPipe(int parent_fd);
+    char** createEnv(int parent_fd);
+    void connectPipe(int parent_fd);
+    void closePipes(int parent_fd);
+
 public:
     KeventHandler(Http &http);
     ~KeventHandler();
