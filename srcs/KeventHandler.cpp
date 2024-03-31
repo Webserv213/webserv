@@ -125,6 +125,8 @@ void KeventHandler::openListenSocket()
         setServerSocket(&server_addr, server[i]);
 
         listen_socket_fd = socket(PF_INET, SOCK_STREAM, 0);
+        EventRecorder st;
+        fd_manager_[listen_socket_fd] = st;
         if (listen_socket_fd == -1)
             throw(std::runtime_error("socket() error\n"));
 
@@ -881,13 +883,18 @@ void    KeventHandler::readChunkedLength(struct kevent* curr_event, int i, char 
         std::string chunked_length_str = charVectorToString(fd_manager_[curr_event->ident].getChunkedLengthTemp());
         int chunked_length_decimal = hexToDecimal(chunked_length_str.c_str(), chunked_length_str.size());
 
+        std::cout << "token string: " << chunked_length_str << "\n";
+
         fd_manager_[curr_event->ident].setChunkedTotalReadLength(chunked_length_decimal);
         fd_manager_[curr_event->ident].clearChunkedLengthTemp();
         fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_DATA);
         fd_manager_[curr_event->ident].setChunkedCrLf(0);
+
+        std::cout << "token: " << chunked_length_decimal << "\n";
     }
 }
-
+int j = 0;
+int sooha = 0;
 // Chunked Data를 읽는 함수
 int KeventHandler::readChunkedData(struct kevent* curr_event, int i, char buf[])
 {
@@ -903,11 +910,14 @@ int KeventHandler::readChunkedData(struct kevent* curr_event, int i, char buf[])
 
     if (fd_manager_[curr_event->ident].getContentCurrentReadLength() < fd_manager_[curr_event->ident].getChunkedTotalReadLength())
     {
+        // std::cout << buf[i];
         fd_content_[curr_event->ident].push_back(buf[i]);
         fd_manager_[curr_event->ident].incContentCurrentReadLength();
 
         if (fd_manager_[curr_event->ident].getContentCurrentReadLength() == fd_manager_[curr_event->ident].getChunkedTotalReadLength())
         {
+            sooha += fd_manager_[curr_event->ident].getContentCurrentReadLength();
+            std::cout << "read chuncked: " << j++ << " size: " << sooha << "\n";
             fd_manager_[curr_event->ident].setContentCurrentReadLength(0);
             fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
         }
@@ -934,7 +944,7 @@ int KeventHandler::readChunkedBody(struct kevent* curr_event, int *i, int n, cha
         {
             readChunkedLength(curr_event, *i, buf);
         }
-        else if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA)
+        if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA)
         {
             read_chunked_body_res = readChunkedData(curr_event, *i, buf);
         }
@@ -1054,8 +1064,8 @@ int  KeventHandler::writeFdFlag(struct kevent* curr_event)
 
 int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
 {
-    std::cout << "cur_fd: " << curr_event->ident << "\n";
-    std::cout << "flag: " << fd_manager_[curr_event->ident].getCgiStatus() << "\n";
+    // std::cout << "cur_fd: " << curr_event->ident << "\n";
+    // std::cout << "flag: " << fd_manager_[curr_event->ident].getCgiStatus() << "\n";
 
     if (fd_manager_.find(curr_event->ident) == fd_manager_.end())
         return (IDLE);
@@ -1068,14 +1078,14 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event, char *buf, int *n)
         return (ERROR);
     else if (curr_event->filter == EVFILT_READ || fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
     {
-        std::cout << "read fd flag\n";
+        // std::cout << "read fd flag\n";
         if (isSocket(curr_event))
             return (IS_SERVER_SOCKET);
         return (readFdFlag(curr_event, buf, n));
     }
     else if (curr_event->filter == EVFILT_WRITE)
     {
-        std::cout << "write fd flag\n";
+        // std::cout << "write fd flag\n";
         return (writeFdFlag(curr_event));
     }
     return (-1);
@@ -1089,7 +1099,7 @@ void KeventHandler::socketError(struct kevent*  curr_event)
             throw(std::runtime_error("server socket error"));
         else
         {
-            std::cout << "curr_event->ident : " << curr_event->ident << std::endl;
+            // std::cout << "curr_event->ident : " << curr_event->ident << std::endl;
             throw(std::runtime_error("client socket error"));
             disconnectClient(curr_event->ident);
         }
@@ -1104,7 +1114,7 @@ void KeventHandler::clientReadError(struct kevent* curr_event)
 
 void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
 {
-    std::cout << "add content\n";
+    // std::cout << "add content\n";
     fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
 }
 
@@ -1285,7 +1295,7 @@ void KeventHandler::runServer(void)
                     break ;
 
                 case IDLE :
-                    std::cout << "IDLE" << std::endl;
+                    // std::cout << "IDLE" << std::endl;
                     break ;
 
                 default :
