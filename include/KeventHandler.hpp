@@ -53,7 +53,7 @@ private:
     std::map<std::string, std::string>  mime_type_;
     std::vector<struct kevent>          change_list_;
     std::vector<char>   chunked_length_temp_;
-    
+
     // event_list의 크기 생각해보기
     struct kevent                       event_list_[EVENT_LIST_SIZE];
     int                                 kq_;
@@ -65,9 +65,9 @@ private:
     void    initKqueue();
     int     getServerIndex(Request req);
     void    executeMethod(int curr_event);
-    void    createResponse(struct kevent* curr_event);
+    void    createResponse(unsigned int cur_fd);
     void    createResponseAutoindex(int curr_event_fd, std::string file_path);
-    void    sendResponse(struct kevent* curr_event);
+    void    sendResponse(unsigned int curr_event_fd);
     void    setServerSocket(struct sockaddr_in *server_addr, Server server);
     bool    createClientSocket(struct kevent* curr_event);
     int     getEventFlag(struct kevent* curr_event, char *buf, int *n);
@@ -113,7 +113,7 @@ private:
 
     // get_utils
     void getFaviconFile(int curr_event_fd);
-    void addFileName_getFileFd(std::string file_path, Server &server, int loc_idx, int curr_event_fd);
+    void openFile(std::string file_path, int curr_event_fd);
     bool checkCgi(Request req, Location loc, std::string extension);
 
     int transferFd(uintptr_t fd);
@@ -121,7 +121,7 @@ private:
     bool isCgiRequest(int cur_fd, int idx, int loc_idx);
     bool isRightMethod(Request &req, int cur_fd);
 
-    
+
 
 
     // execveCgi
