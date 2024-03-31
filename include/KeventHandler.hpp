@@ -90,8 +90,12 @@ private:
     int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);
     std::string makeDirList(std::string file_path);
 
-    //event utils
     int     addSegmentReqAndReadMode(struct kevent* curr_event, char buf[], int n);
+    void    readReqHeader(struct kevent* curr_event, int *i, int n, char buf[]);
+    int     readContentBody(struct kevent* curr_event, int *i, int n, char buf[]);
+    int     readChunkedBody(struct kevent* curr_event, int *i, int n, char buf[]);
+    void    readChunkedLength(struct kevent* curr_event, int i, char buf[]);
+    int     readChunkedData(struct kevent* curr_event, int i, char buf[]);
 
     //req parsing utils
     void    parsingReqStartLineAndHeaders(struct kevent* curr_event);
@@ -113,6 +117,9 @@ private:
     bool checkCgi(Request req, Location loc, std::string extension);
 
     int transferFd(uintptr_t fd);
+
+    
+
 
 public:
     KeventHandler(Http &http);
