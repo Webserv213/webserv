@@ -16,6 +16,7 @@ enum    ChunkedFlag
 {
     CHUNKED_LENGTH,
     CHUNKED_DATA,
+    DONE_DATA,
 };
 
 enum PipeMode
