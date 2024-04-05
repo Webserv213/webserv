@@ -70,12 +70,12 @@ private:
     void    sendResponse(unsigned int curr_event_fd);
     void    setServerSocket(struct sockaddr_in *server_addr, Server server);
     bool    createClientSocket(struct kevent* curr_event);
-    int     getEventFlag(struct kevent* curr_event, char *buf, int *n);
+    int     getEventFlag(struct kevent* curr_event);
     void    socketError(struct kevent*  curr_event);
     void    clientReadError(struct kevent* curr_event);
     void    addContent(struct kevent* curr_event, char buf[], int n);
     bool    isSocket(struct kevent* curr_event);
-    int     readFdFlag(struct kevent* curr_event, char *buf, int *n);
+    int     readFdFlag(struct kevent* curr_event);
     void    createFile(struct kevent* curr_event);
     int     writeFdFlag(struct kevent* curr_event);
 
@@ -90,12 +90,12 @@ private:
     int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);
     std::string makeDirList(std::string file_path);
 
-    int     addSegmentReqAndReadMode(struct kevent* curr_event, char buf[], int n);
-    void    readReqHeader(struct kevent* curr_event, int *i, int n, char buf[]);
-    int     readContentBody(struct kevent* curr_event, int *i, int n, char buf[]);
-    int     readChunkedBody(struct kevent* curr_event, int *i, int n, char buf[]);
-    void    readChunkedLength(struct kevent* curr_event, int i, char buf[]);
-    int     readChunkedData(struct kevent* curr_event, int i, char buf[]);
+    int     addSegmentReqAndReadMode(struct kevent* curr_event);
+    int     readReqHeader(struct kevent* curr_event);
+    int     readContentBody(struct kevent* curr_event);
+    int     readChunkedBody(struct kevent* curr_event);
+    void    readChunkedLength(struct kevent* curr_event);
+    int     readChunkedData(struct kevent* curr_event);
 
     //req parsing utils
     void    parsingReqStartLineAndHeaders(struct kevent* curr_event);

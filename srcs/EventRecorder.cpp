@@ -8,7 +8,7 @@ EventRecorder::EventRecorder()
     event_write_file_ = -1;
     parent_client_fd_ = -1;
     fd_error_ = -1;
-    file_offset_ = 0;
+    fd_content_index_ = 0;
     autoindex_ = -1;
     read_type_ = READ_HEADER;
     header_eof_ = 0;
@@ -27,7 +27,7 @@ EventRecorder::EventRecorder(int parent_client_fd)
     event_write_res_ = -1;
     event_write_pipe_ = -1;
     event_write_file_ = -1;
-    file_offset_ = 0;
+    fd_content_index_ = 0;
     parent_client_fd_ = parent_client_fd;
     fd_error_ = -1;
     autoindex_ = -1;
@@ -47,9 +47,9 @@ EventRecorder::~EventRecorder()
 
 }
 
-void EventRecorder::setFileOffset(int n)
+void EventRecorder::setFdContentIndex(int n)
 {
-    file_offset_ += n;
+    fd_content_index_ = n;
 }
 
 void EventRecorder::setEventReadFile(int flag)
@@ -187,6 +187,11 @@ void EventRecorder::setPipeMode(int pipe_mode)
 
 
 // getter
+
+size_t EventRecorder::getFdContentIndex(void)
+{
+    return (fd_content_index_);
+}
 
 int EventRecorder::getEventReadFile(void)
 {

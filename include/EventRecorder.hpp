@@ -33,8 +33,8 @@ private:
     int event_write_pipe_;
     int event_write_file_;
     int parent_client_fd_;
-    int fd_error_;
-    int file_offset_;
+    size_t  fd_error_;
+    int fd_content_index_;
     int autoindex_;
     int read_type_; // reading header or content-longth body or chunked body
     int header_eof_; // cr - lf - cr -lf 가 연속으로 들어오는지 기록
@@ -59,7 +59,7 @@ public:
     EventRecorder(int parent_client_fd);
     ~EventRecorder();
 
-    void setFileOffset(int n);
+    void setFdContentIndex(int n);
     void setEventReadFile(int flag);
     void setEventWriteRes(int flag);
     void setEventWritePipe(int flag);
@@ -85,6 +85,7 @@ public:
     void setCgiPath(std::string path);
     void setPipeMode(int pipe_mode);
 
+    size_t getFdContentIndex(void);
     int getEventReadFile(void);
     int getEventWriteRes(void);
     int getEventWritePipe(void);
