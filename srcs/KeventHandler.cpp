@@ -855,14 +855,15 @@ int KeventHandler::readContentBody(struct kevent* curr_event)
         read_content_body_res = READ_FINISH_REQUEST;
     else
     {
-        if (fd_content_[curr_event->ident].size() == total_content_body_length)
+        if (fd_content_[curr_event->ident].size() >= total_content_body_length)
         {
-            std::string body = charVectorToString(fd_content_[curr_event->ident]);
+            std::vector<char>::iterator it = fd_content_[curr_event->ident].begin();
+            std::vector<char>           content_split(it, it + (total_content_body_length - 1));
+            std::string                 body = charVectorToString(content_split);
 
             fd_manager_[curr_event->ident].getRequest().setBody(body);
-            fd_manager_[curr_event->ident].setContentCurrentReadLength(0);
 
-            fd_content_[curr_event->ident].clear();
+            fd_content_[curr_event->ident].erase(it, it + (total_content_body_length - 1));
             fd_manager_[curr_event->ident].setFdContentIndex(0);
 
             read_content_body_res = READ_FINISH_REQUEST;
@@ -871,67 +872,41 @@ int KeventHandler::readContentBody(struct kevent* curr_event)
         {
             read_content_body_res = IDLE;
         }
-        else if (fd_content_[curr_event->ident].size() > total_content_body_length)
-        {
-            std::vector<char>::iterator   it = fd_content_[curr_event->ident].begin();
-            std::vector<char>   split_content(it, it + (total_content_body_length) - 1);
-            std::string body = charVectorToString(split_content);
-
-            fd_manager_[curr_event->ident].getRequest().setBody(body);
-            fd_manager_[curr_event->ident].setContentCurrentReadLength(0);
-
-            // fd_content_[curr_event->ident].clear();
-            fd_content_[curr_event->ident].erase(it, it + (total_content_body_length - 1));
-            fd_manager_[curr_event->ident].setFdContentIndex(0);
-
-            read_content_body_res = READ_FINISH_REQUEST;
-        }
     }
     return (read_content_body_res);
 }
 
 // Chunked Length를 읽는 함수
-void    KeventHandler::readChunkedLength(struct kevent* curr_event)
+void    KeventHandler::readChunkedLength(struct kevent* curr_event, std::string chunk_split)
 {
-    if (fd_manager_[curr_event->ident].getChunkedCrLf() == 0)
-        fd_manager_[curr_event->ident].pushbackChunkedLengthTemp(buf[i]);
-    if (fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
-    {
-        // fd_manager_[curr_event->ident].pushbackChunkedLengthTemp('\0');
-        // std::string chunked_length_str = charVectorToString(fd_content_[curr_event->ident]);
-        std::string chunked_length_str = charVectorToString(fd_manager_[curr_event->ident].getChunkedLengthTemp());
-        int chunked_length_decimal = hexToDecimal(chunked_length_str.c_str(), chunked_length_str.size());
+    int chunked_length_decimal = hexToDecimal(chunk_split.c_str(), chunk_split.size());
 
-        std::cout << "token string: " << chunked_length_str << "\n";
+    fd_manager_[curr_event->ident].setChunkedTotalReadLength(chunked_length_decimal);
+    fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_DATA);
+    fd_manager_[curr_event->ident].setChunkedCrLf(0);
 
-        fd_manager_[curr_event->ident].setChunkedTotalReadLength(chunked_length_decimal);
-        fd_manager_[curr_event->ident].clearChunkedLengthTemp();
-        fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_DATA);
-        fd_manager_[curr_event->ident].setChunkedCrLf(0);
-
-        std::cout << "token: " << chunked_length_decimal << "\n";
-    }
+    std::cout << "token: " << chunked_length_decimal << "\n";
 }
-int j = 0;
-int sooha = 0;
+
 // Chunked Data를 읽는 함수
-int KeventHandler::readChunkedData(struct kevent* curr_event)
+int KeventHandler::readChunkedData(struct kevent* curr_event, std::string chunk_split)
 {
     int read_chunked_data_res = IDLE;
 
     if (fd_manager_[curr_event->ident].getChunkedTotalReadLength() == 0 && fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
     {
-        std::string body = charVectorToString(fd_content_[curr_event->ident]);
-        fd_manager_[curr_event->ident].getRequest().addBody(body);
+        // std::string body = charVectorToString(fd_content_[curr_event->ident]);
+        // fd_manager_[curr_event->ident].getRequest().addBody(body);
 
         read_chunked_data_res = READ_FINISH_REQUEST;
     }
+    
 
     if (fd_manager_[curr_event->ident].getContentCurrentReadLength() < fd_manager_[curr_event->ident].getChunkedTotalReadLength())
     {
         // std::cout << buf[i];
-        fd_content_[curr_event->ident].push_back(buf[i]);
-        fd_manager_[curr_event->ident].incContentCurrentReadLength();
+        // fd_content_[curr_event->ident].push_back(buf[i]);
+        fd_manager_[curr_event->ident].setContentCurrentReadLength();
 
         if (fd_manager_[curr_event->ident].getContentCurrentReadLength() == fd_manager_[curr_event->ident].getChunkedTotalReadLength())
         {
@@ -950,40 +925,61 @@ int KeventHandler::readChunkedData(struct kevent* curr_event)
 int KeventHandler::readChunkedBody(struct kevent* curr_event)
 {
     int read_chunked_body_res = IDLE;
+    int crlf_size = 2;
     
-    for (; *i < n; (*i)++)
+
+    // crlf찾으면
+    // 0-i까지 ft_content 자르고
+    // CHUNKED_LENGTH 이면 length에
+    // CHUNKED_DATA이면 data에 -> 
+
+    while (1)
     {
-        if (buf[*i] == '\r' && fd_manager_[curr_event->ident].getChunkedCrLf() == 0)
-            fd_manager_[curr_event->ident].setChunkedCrLf(1);
-        else if (buf[*i] == '\n' && fd_manager_[curr_event->ident].getChunkedCrLf() == 1)
-            fd_manager_[curr_event->ident].setChunkedCrLf(2);
-        else
-            fd_manager_[curr_event->ident].setChunkedCrLf(0);
-
-        if (fd_manager_[curr_event->ident].getChunkedDataType() == DONE_DATA)
+        size_t  i = fd_manager_[curr_event->ident].getFdContentIndex();
+        for (; i < fd_content_[curr_event->ident].size(); i++)
         {
-            if ( fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
+            if (fd_content_[curr_event->ident].at(i) == '\r' && fd_manager_[curr_event->ident].getChunkedCrLf() == 0)
+                fd_manager_[curr_event->ident].setChunkedCrLf(1);
+            else if (fd_content_[curr_event->ident].at(i) == '\n' && fd_manager_[curr_event->ident].getChunkedCrLf() == 1)
             {
-                fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
+                fd_manager_[curr_event->ident].setChunkedCrLf(2);
+                i++;
+                break ;
+            }
+            else
                 fd_manager_[curr_event->ident].setChunkedCrLf(0);
-            }
         }
-        else
+        if (fd_manager_[curr_event->ident].getChunkedCrLf() != 2)
+            break ;
+        std::vector<char>::iterator   it = fd_content_[curr_event->ident].begin();
+        std::vector<char>   content_split(it, it + (i - 1 - crlf_size));
+        std::string chunk_split = charVectorToString(content_split);
+        fd_content_[curr_event->ident].erase(it, it + (i - 1));
+        fd_manager_[curr_event->ident].setFdContentIndex(0);
+
+
+        // if (fd_manager_[curr_event->ident].getChunkedDataType() == DONE_DATA)
+        // {
+        //     if (fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
+        //     {
+        //         fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
+        //         fd_manager_[curr_event->ident].setChunkedCrLf(0);
+        //     }
+        // }
+        // else
+        // {
+        if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_LENGTH)
         {
-            if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_LENGTH)
-            {
-                // std::cout << "CHUNKED_LENGTH\n";
-                readChunkedLength(curr_event, *i, buf);
-            }
-            else if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA)
-            {
-                // std::cout << "CHUNKED_DATA";
-                read_chunked_body_res = readChunkedData(curr_event, *i, buf);
-            }
+            // std::cout << "CHUNKED_LENGTH\n";
+            readChunkedLength(curr_event, chunk_split);
         }
-
+        else if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA)
+        {
+            // std::cout << "CHUNKED_DATA";
+            read_chunked_body_res = readChunkedData(curr_event, chunk_split);
+        }
+        // }
     }
-
     return (read_chunked_body_res);
 }
 

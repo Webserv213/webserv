@@ -52,7 +52,6 @@ private:
     std::map<int, std::vector<char> >   fd_content_;
     std::map<std::string, std::string>  mime_type_;
     std::vector<struct kevent>          change_list_;
-    std::vector<char>   chunked_length_temp_;
 
     // event_list의 크기 생각해보기
     struct kevent                       event_list_[EVENT_LIST_SIZE];
@@ -94,8 +93,8 @@ private:
     int     readReqHeader(struct kevent* curr_event);
     int     readContentBody(struct kevent* curr_event);
     int     readChunkedBody(struct kevent* curr_event);
-    void    readChunkedLength(struct kevent* curr_event);
-    int     readChunkedData(struct kevent* curr_event);
+    void    readChunkedLength(struct kevent* curr_event, std::string chunk_split);
+    int     readChunkedData(struct kevent* curr_event, std::string chunk_split);
 
     //req parsing utils
     void    parsingReqStartLineAndHeaders(struct kevent* curr_event);
