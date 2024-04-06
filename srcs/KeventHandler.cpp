@@ -588,6 +588,9 @@ bool    KeventHandler::isCgiRequest(int cur_fd, int idx, int loc_idx)
     if (fd_manager_[cur_fd].getCgiStatus() != DONE_CGI && http_.getServer()[idx].getLocationBlock(loc_idx).getCgiPath() != "")
     {
         std::cout << "3.1.1\n";
+        std::string clear_body = "";
+        fd_manager_[cur_fd].setSendCgiBody(fd_manager_[cur_fd].getRequest().getBody());
+        fd_manager_[cur_fd].getRequest().setBody(clear_body);
         pipe(fd);
         EventRecorder pipe_event_recorder(cur_fd);
         fd_manager_[fd[1]] = pipe_event_recorder;

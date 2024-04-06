@@ -190,6 +190,10 @@ void EventRecorder::setPipeMode(int pipe_mode)
     pipe_mode_ = pipe_mode;
 }
 
+void EventRecorder::setSendCgiBody(std::string send_cgi_body)
+{
+    send_cgi_body_ = send_cgi_body;
+}
 
 // getter
 
@@ -296,6 +300,11 @@ std::string EventRecorder::getCgiPath(void)
 int EventRecorder::getPipeMode(void)
 {
     return (pipe_mode_);
+}
+
+std::string EventRecorder::getSendCgiBody(void)
+{
+    return (send_cgi_body_);
 }
 
 std::vector<char>& EventRecorder::getChunkedLengthTemp()

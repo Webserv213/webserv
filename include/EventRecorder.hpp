@@ -49,6 +49,7 @@ private:
     int send_pipe_[2];
     int Receive_pipe_[2];
     int pipe_mode_;
+    std::string send_cgi_body_;
 
     std::vector<char>   chunked_length_temp_;
     Request req_;
@@ -84,6 +85,7 @@ public:
     void setCgiStatus(int status);
     void setCgiPath(std::string path);
     void setPipeMode(int pipe_mode);
+    void setSendCgiBody(std::string send_cgi_body);
 
     size_t getFdContentIndex(void);
     int getEventReadFile(void);
@@ -106,6 +108,7 @@ public:
     int getCgiStatus(void);
     std::string getCgiPath(void);
     int getPipeMode(void);
+    std::string getSendCgiBody(void);
 
     // utils
     void pushbackChunkedLengthTemp(char c);
