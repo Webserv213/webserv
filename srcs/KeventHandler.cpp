@@ -441,16 +441,21 @@ void KeventHandler::methodPostHandler(Server &server, Request &req, int curr_eve
 {
     bool    is_allow_method;
 
+    std::cout << "5 [post in]\n";
     is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
     if (is_allow_method == true)
     {
+        std::cout << "5.5\n";
         std::string file_path;
 
         file_path = createFilePath(server, req, loc_idx, size);
         createFileForPost(curr_event_fd, file_path);
     }
     else
+    {
+        std::cout << "6\n";
         notAllowedMethod405(curr_event_fd);
+    }
 }
 
 // ========================================= get_utils =========================================
@@ -579,8 +584,10 @@ bool    KeventHandler::isCgiRequest(int cur_fd, int idx, int loc_idx)
 {
     int fd[2];
 
+    std::cout << "3.1\n";
     if (fd_manager_[cur_fd].getCgiStatus() != DONE_CGI && http_.getServer()[idx].getLocationBlock(loc_idx).getCgiPath() != "")
     {
+        std::cout << "3.1.1\n";
         pipe(fd);
         EventRecorder pipe_event_recorder(cur_fd);
         fd_manager_[fd[1]] = pipe_event_recorder;
@@ -594,6 +601,7 @@ bool    KeventHandler::isCgiRequest(int cur_fd, int idx, int loc_idx)
         changeEvents(change_list_, cur_fd , EVFILT_READ, EV_DELETE, 0, 0, NULL);
         return (true);
     }
+    std::cout << "3.2\n";
     return (false);
 }
 
@@ -618,14 +626,18 @@ void    KeventHandler::executeMethod(int cur_fd)
     size_t size = 0;
     Request req = fd_manager_[cur_fd].getRequest();
 
+    std::cout << "1\n";
     idx = getServerIndex(req);
+    std::cout << "2\n";
     loc_idx = getLocationIndex(req, http_.getServer()[idx], &size);
+    std::cout << "3\n";
 
     if (isRightMethod(req, cur_fd) == false)
         return ;
     if (isCgiRequest(cur_fd, idx, loc_idx))
         return ;
 
+    std::cout << "4\n";
     if (req.getRequestLine().getMethod() == "GET")
         methodGetHandler(http_.getServer()[idx], req, cur_fd, loc_idx, size);
     else if (req.getRequestLine().getMethod() == "POST")
@@ -665,16 +677,18 @@ void KeventHandler::createResponse(unsigned int cur_fd)
     fd_manager_[parent_fd].getResponse().getHeaders().setConnection("keep-alive");
     fd_manager_[parent_fd].getResponse().getHeaders().setContentEncoding("default");
 
-    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size() != 0 && fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] == "/favicon.ico")
-        fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(1150));
-    else
-        fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[cur_fd].size()));
 
     std::string file_data(charVectorToString(fd_content_[cur_fd]));
 
     if (fd_manager_[parent_fd].getRequest().getRequestLine().getMethod() == "HEAD")
         file_data = "";
     fd_manager_[parent_fd].getResponse().addBody(file_data);
+
+    if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size() != 0 && fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[0] == "/favicon.ico")
+        fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(1150));
+    else
+        fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_content_[cur_fd].size()));
+        // fd_manager_[parent_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_manager_[parent_fd].getRequest().getBody().size()));
 
     std::string res_tmp;
     res_tmp = "";
@@ -836,7 +850,7 @@ int KeventHandler::readReqHeader(struct kevent* curr_event)
         std::cout << "----------------HEADER EOF----------------" << std::endl;
         std::vector<char>::iterator it = fd_content_[curr_event->ident].begin();
         parsingReqStartLineAndHeaders(curr_event);
-        fd_content_[curr_event->ident].erase(it, it + (i - 1));
+        fd_content_[curr_event->ident].erase(it, it + i);
         fd_manager_[curr_event->ident].setFdContentIndex(0);
         fd_manager_[curr_event->ident].setHeaderEof(0);
     }
@@ -849,7 +863,7 @@ int KeventHandler::readReqHeader(struct kevent* curr_event)
 int KeventHandler::readContentBody(struct kevent* curr_event)
 {
     int read_content_body_res = IDLE;
-    int total_content_body_length = fd_manager_[curr_event->ident].getRequest().getHeaders().getContentLength();
+    size_t total_content_body_length = fd_manager_[curr_event->ident].getRequest().getHeaders().getContentLength();
 
     if (total_content_body_length == 0)
         read_content_body_res = READ_FINISH_REQUEST;
@@ -858,12 +872,12 @@ int KeventHandler::readContentBody(struct kevent* curr_event)
         if (fd_content_[curr_event->ident].size() >= total_content_body_length)
         {
             std::vector<char>::iterator it = fd_content_[curr_event->ident].begin();
-            std::vector<char>           content_split(it, it + (total_content_body_length - 1));
+            std::vector<char>           content_split(it, it + total_content_body_length);
             std::string                 body = charVectorToString(content_split);
 
             fd_manager_[curr_event->ident].getRequest().setBody(body);
 
-            fd_content_[curr_event->ident].erase(it, it + (total_content_body_length - 1));
+            fd_content_[curr_event->ident].erase(it, it + total_content_body_length);
             fd_manager_[curr_event->ident].setFdContentIndex(0);
 
             read_content_body_res = READ_FINISH_REQUEST;
@@ -889,36 +903,34 @@ void    KeventHandler::readChunkedLength(struct kevent* curr_event, std::string 
 }
 
 // Chunked Data를 읽는 함수
-int KeventHandler::readChunkedData(struct kevent* curr_event, std::string chunk_split)
+void    KeventHandler::readChunkedData(struct kevent* curr_event, std::string chunk_split)
 {
-    int read_chunked_data_res = IDLE;
 
-    if (fd_manager_[curr_event->ident].getChunkedTotalReadLength() == 0 && fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
-    {
-        // std::string body = charVectorToString(fd_content_[curr_event->ident]);
-        // fd_manager_[curr_event->ident].getRequest().addBody(body);
-
-        read_chunked_data_res = READ_FINISH_REQUEST;
-    }
+    // if (fd_manager_[curr_event->ident].getChunkedTotalReadLength() == 0 && fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
+    //     read_chunked_data_res = READ_FINISH_REQUEST;
+    // else
+    // {
+    fd_manager_[curr_event->ident].getRequest().addBody(chunk_split);
+    fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
+    fd_manager_[curr_event->ident].setChunkedCrLf(0);
+    // }
     
 
-    if (fd_manager_[curr_event->ident].getContentCurrentReadLength() < fd_manager_[curr_event->ident].getChunkedTotalReadLength())
-    {
-        // std::cout << buf[i];
-        // fd_content_[curr_event->ident].push_back(buf[i]);
-        fd_manager_[curr_event->ident].setContentCurrentReadLength();
+    // if (fd_manager_[curr_event->ident].getContentCurrentReadLength() < fd_manager_[curr_event->ident].getChunkedTotalReadLength())
+    // {
+    //     // std::cout << buf[i];
+    //     // fd_content_[curr_event->ident].push_back(buf[i]);
+    //     fd_manager_[curr_event->ident].setContentCurrentReadLength();
 
-        if (fd_manager_[curr_event->ident].getContentCurrentReadLength() == fd_manager_[curr_event->ident].getChunkedTotalReadLength())
-        {
-            // sooha += fd_manager_[curr_event->ident].getContentCurrentReadLength();
-            // std::cout << "read chuncked: " << j++ << " size: " << sooha << "\n";
-            fd_manager_[curr_event->ident].setContentCurrentReadLength(0);
-            // fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
-            fd_manager_[curr_event->ident].setChunkedDataType(DONE_DATA);
-        }
-    }
-
-    return (read_chunked_data_res);
+    //     if (fd_manager_[curr_event->ident].getContentCurrentReadLength() == fd_manager_[curr_event->ident].getChunkedTotalReadLength())
+    //     {
+    //         // sooha += fd_manager_[curr_event->ident].getContentCurrentReadLength();
+    //         // std::cout << "read chuncked: " << j++ << " size: " << sooha << "\n";
+    //         fd_manager_[curr_event->ident].setContentCurrentReadLength(0);
+    //         // fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
+    //         fd_manager_[curr_event->ident].setChunkedDataType(DONE_DATA);
+    //     }
+    // }
 }
 
 // Chunked 타입의 Body를 읽는 함수
@@ -926,59 +938,67 @@ int KeventHandler::readChunkedBody(struct kevent* curr_event)
 {
     int read_chunked_body_res = IDLE;
     int crlf_size = 2;
-    
 
-    // crlf찾으면
-    // 0-i까지 ft_content 자르고
-    // CHUNKED_LENGTH 이면 length에
-    // CHUNKED_DATA이면 data에 -> 
-
+    // printCharVectorCRLF(fd_content_[curr_event->ident]);
     while (1)
     {
         size_t  i = fd_manager_[curr_event->ident].getFdContentIndex();
         for (; i < fd_content_[curr_event->ident].size(); i++)
         {
+            // std::cout << fd_content_[curr_event->ident][i] << "\n";
+            // if (fd_content_[curr_event->ident][i] == '\r')
+            //     std::cout << "@@\n";
             if (fd_content_[curr_event->ident].at(i) == '\r' && fd_manager_[curr_event->ident].getChunkedCrLf() == 0)
                 fd_manager_[curr_event->ident].setChunkedCrLf(1);
             else if (fd_content_[curr_event->ident].at(i) == '\n' && fd_manager_[curr_event->ident].getChunkedCrLf() == 1)
             {
                 fd_manager_[curr_event->ident].setChunkedCrLf(2);
+                //
+                if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA && fd_manager_[curr_event->ident].getChunkedCurrentReadLength() < fd_manager_[curr_event->ident].getChunkedTotalReadLength())
+                {
+                    fd_manager_[curr_event->ident].setChunkedCrLf(0);
+                    fd_manager_[curr_event->ident].incChunkedCurrentReadLength();
+                    continue;
+                }
+                //
                 i++;
                 break ;
             }
             else
                 fd_manager_[curr_event->ident].setChunkedCrLf(0);
+            
+            if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA)
+                fd_manager_[curr_event->ident].incChunkedCurrentReadLength();
+            else
+                fd_manager_[curr_event->ident].setChunkedCurrentReadLength(0);
         }
         if (fd_manager_[curr_event->ident].getChunkedCrLf() != 2)
+        {
+            fd_manager_[curr_event->ident].setFdContentIndex(i);
             break ;
+        }
+        if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA
+            && fd_manager_[curr_event->ident].getChunkedTotalReadLength() == 0 && fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
+        {
+            std::cout << "chunked body end\n";
+            return (READ_FINISH_REQUEST);
+        }    
+
         std::vector<char>::iterator   it = fd_content_[curr_event->ident].begin();
-        std::vector<char>   content_split(it, it + (i - 1 - crlf_size));
+        std::vector<char>   content_split(it, it + (i - crlf_size));
         std::string chunk_split = charVectorToString(content_split);
-        fd_content_[curr_event->ident].erase(it, it + (i - 1));
+        fd_content_[curr_event->ident].erase(it, it + i);
         fd_manager_[curr_event->ident].setFdContentIndex(0);
 
+        // std::cout << "idx: " << i << "\n";
+        // std::cout << "chunked_split_size: " << chunk_split.size() << "\n";
+        // std::cout << "chunked_split: " << chunk_split << "\n";
 
-        // if (fd_manager_[curr_event->ident].getChunkedDataType() == DONE_DATA)
-        // {
-        //     if (fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
-        //     {
-        //         fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
-        //         fd_manager_[curr_event->ident].setChunkedCrLf(0);
-        //     }
-        // }
-        // else
-        // {
+
         if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_LENGTH)
-        {
-            // std::cout << "CHUNKED_LENGTH\n";
             readChunkedLength(curr_event, chunk_split);
-        }
         else if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA)
-        {
-            // std::cout << "CHUNKED_DATA";
-            read_chunked_body_res = readChunkedData(curr_event, chunk_split);
-        }
-        // }
+            readChunkedData(curr_event, chunk_split);
     }
     return (read_chunked_body_res);
 }
@@ -990,7 +1010,7 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event)
 
     if (fd_manager_[curr_event->ident].getReadType() == READ_HEADER)
     {
-        std::cout << "READ_HEADER\n";
+        // std::cout << "READ_HEADER\n";
         res = readReqHeader(curr_event);
         if (res == IDLE)
             return (res);
@@ -998,17 +1018,17 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event)
 
     if (fd_manager_[curr_event->ident].getReadType() == NO_EXIST_BODY)
     {
-        std::cout << "READ_FINISH_REQUEST\n";
+        // std::cout << "READ_FINISH_REQUEST\n";
         res = READ_FINISH_REQUEST;
     }
     else if (fd_manager_[curr_event->ident].getReadType() == READ_CONTENT_LENGTH_BODY)
     {
-        std::cout << "READ_CONTENT_LENGTH_BODY\n";
+        // std::cout << "READ_CONTENT_LENGTH_BODY\n";
         res = readContentBody(curr_event);
     }
     else if (fd_manager_[curr_event->ident].getReadType() == READ_CHUNKED_BODY)
     {
-        std::cout << "READ_CHUNKED_BODY\n";
+        // std::cout << "READ_CHUNKED_BODY\n";
         res = readChunkedBody(curr_event);
     }
     
@@ -1045,6 +1065,7 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
     char    buf[BUFFER_SIZE];
     int     n = 0;
 
+    std::cout << "pipe read!\n";
     if (fd_content_.find(curr_event->ident) != fd_content_.end())
     {
         memset(buf, 0, BUFFER_SIZE);
@@ -1120,27 +1141,35 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event)
     // std::cout << "cur_fd: " << curr_event->ident << "\n";
     // std::cout << "flag: " << fd_manager_[curr_event->ident].getCgiStatus() << "\n";
 
+    std::cout << "occur event! 1\n";
     if (fd_manager_.find(curr_event->ident) == fd_manager_.end())
         return (IDLE);
+    std::cout << "occur event! 2\n";
 
     // cgi
     if (fd_manager_[curr_event->ident].getCgiStatus() == WRITE_CGI)
         return (WRITE_CGI);
+    std::cout << "occur event! 3\n";
 
     if (curr_event->flags & EV_ERROR)
+    {
+        std::cout << "occur event! ev_error\n";
         return (ERROR);
+    }
     else if (curr_event->filter == EVFILT_READ || fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
     {
-        // std::cout << "read fd flag\n";
+        std::cout << "read fd flag\n";
         if (isSocket(curr_event))
             return (IS_SERVER_SOCKET);
         return (readFdFlag(curr_event));
     }
     else if (curr_event->filter == EVFILT_WRITE)
     {
-        // std::cout << "write fd flag\n";
+        std::cout << "write fd flag\n";
         return (writeFdFlag(curr_event));
     }
+    
+    std::cout << "occur event! 4\n";
     return (-1);
 }
 
@@ -1229,21 +1258,54 @@ void KeventHandler::createPipe(int parent_fd)
     fd_manager_[fd[0]].setCgiStatus(READ_CGI);
 }
 
+// void writeData(int fd, const std::string& data) {
+//     const char* buffer = data.c_str(); // 문자열 데이터를 버퍼로 변환
+//     size_t totalBytesWritten = 0; // 쓰여진 총 바이트 수
+
+//     while (totalBytesWritten < data.size()) {
+//         // 남은 데이터의 일부분을 쓰기
+//         int bytesToWrite = data.size() - totalBytesWritten;
+//         if (bytesToWrite > 1024) { // 예를 들어 1024 바이트씩 쓰기
+//             bytesToWrite = 1024;
+//         }
+
+//         int bytesWritten = write(fd, buffer + totalBytesWritten, bytesToWrite);
+//         if (bytesWritten < 0) {
+//             // write 호출 실패
+//             // 에러 처리 코드 추가
+//             break;
+//         }
+
+//         totalBytesWritten += bytesWritten; // 쓰여진 바이트 수 업데이트
+//     }
+// }
+
 //cgi pipe 쓰기 fd
 void KeventHandler::executeCgi(struct kevent* curr_event)
 {
     pid_t pid;
     int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
 
+    std::cout << "occur event! 2.1\n";
     fd_manager_[curr_event->ident].setCgiStatus(-1);
+    std::cout << "body size : " << fd_manager_[parent_fd].getRequest().getBody().size() << std::endl;
+    // std::cout << "body : " << "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[" << fd_manager_[parent_fd].getRequest().getBody();
+    // std::cout << "]]]]]]]]]]]]]]]]]]]]]]]]]]]\n";
+    // writeData(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody());
     int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getBody().size());
+    // int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), 100);
     if (n < 0)
+    {
+        write(2, "occur event! 2.1 erorr\n", 24);
         std::runtime_error("cgi write error\n");
-
+    }
+    std::cout << "occur event! 2.2\n";
     createPipe(parent_fd);
+    std::cout << "occur event! 2.3\n";
     pid = fork();
     if (pid == 0)
     {
+        std::cout << "occur event! 2.3.1 child\n";
         char **env;
         char *path[2];
 
@@ -1256,6 +1318,7 @@ void KeventHandler::executeCgi(struct kevent* curr_event)
     }
     else
     {
+        std::cout << "occur event! 2.3.1 parents\n";
         closePipes(parent_fd);
         waitpid(-1, 0, 0);
         fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setCgiStatus(READ_CGI);
@@ -1264,6 +1327,7 @@ void KeventHandler::executeCgi(struct kevent* curr_event)
         changeEvents(change_list_, fd_manager_[parent_fd].getReceivePipe(0), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
         std::cout << "run!\n";
     }
+    std::cout << "occur event! 3\n";
 }
 
 int KeventHandler::transferFd(uintptr_t fd)

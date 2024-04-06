@@ -94,7 +94,7 @@ private:
     int     readContentBody(struct kevent* curr_event);
     int     readChunkedBody(struct kevent* curr_event);
     void    readChunkedLength(struct kevent* curr_event, std::string chunk_split);
-    int     readChunkedData(struct kevent* curr_event, std::string chunk_split);
+    void    readChunkedData(struct kevent* curr_event, std::string chunk_split);
 
     //req parsing utils
     void    parsingReqStartLineAndHeaders(struct kevent* curr_event);

@@ -162,3 +162,16 @@ bool existMethod(std::string method, std::vector<std::string> accessMethod)
     }
     return (false);
 }
+
+void   printCharVectorCRLF(std::vector<char>& vector_char)
+{
+    for (size_t i = 0; i < vector_char.size(); i++)
+    {
+        if (vector_char[i] == '\r')
+            std::cout << "\\r";
+        else if (vector_char[i] == '\n')
+            std::cout << "\\n";
+        else
+            std::cout << vector_char[i];
+    }
+}

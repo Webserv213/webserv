@@ -108,6 +108,11 @@ void EventRecorder::incContentCurrentReadLength(void)
     content_current_read_length_++;
 }
 
+void EventRecorder::incChunkedCurrentReadLength(void)
+{
+    chunked_current_read_length_++;
+}
+
 void    EventRecorder::setChunkedEof(int chunked_eof)
 {
     chunked_eof_ = chunked_eof;
