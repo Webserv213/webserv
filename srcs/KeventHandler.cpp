@@ -948,6 +948,7 @@ void    KeventHandler::readChunkedData(struct kevent* curr_event, std::string ch
     // else
     // {
     fd_manager_[curr_event->ident].getRequest().addBody(chunk_split);
+    fd_manager_[curr_event->ident].getRequest().setBody(fd_manager_[curr_event->ident].getRequest().getBody());
     fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
     fd_manager_[curr_event->ident].setChunkedCrLf(0);
     // }
@@ -1091,10 +1092,11 @@ int KeventHandler::isPipeFile(unsigned int file_fd)
     int parent_fd = fd_manager_[file_fd].getParentClientFd();
     str = parsingCgiBody(charVectorToString(fd_content_[file_fd]));
 
-    // if (str.size() % 10000 == 0)
-    //     std::cout << "read size += " << str.size() << std::endl;
+    if (str.size() > 99000000 == 0)
+        std::cout << "read size += " << str.size() << std::endl;
 
     fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().addBody(str);
+    fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().setBody(fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().getBody());
     changeEvents(change_list_, file_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
     changeEvents(change_list_, fd_manager_[parent_fd].getSendPipe(1), EVFILT_WRITE, EV_ADD, 0, 0, NULL);
     fd_manager_[fd_manager_[parent_fd].getSendPipe(1)].setCgiStatus(WRITE_CGI);

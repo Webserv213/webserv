@@ -25,13 +25,14 @@ std::string& Request::getBody(void)
     return (body_);
 }
 
-void Request::addBody(std::string& body)
+void Request::addBody(std::string body)
 {
     body_ += body;
 }
 
-void Request::setBody(std::string& body)
+void Request::setBody(std::string body)
 {
+    body_.clear();
     body_ = body;
 }
 
