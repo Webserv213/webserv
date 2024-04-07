@@ -116,7 +116,7 @@ private:
     bool checkCgi(Request req, Location loc, std::string extension);
 
     int transferFd(uintptr_t fd);
-    bool isPipeFile(unsigned int file_fd);
+    int isPipeFile(unsigned int file_fd);
     bool isCgiRequest(int cur_fd, int idx, int loc_idx);
     bool isRightMethod(Request &req, int cur_fd);
 

@@ -19,6 +19,7 @@ EventRecorder::EventRecorder()
     chunked_current_read_length_ = 0;
     chunekd_total_read_length_ = 0;
     pipe_mode_ = -1;
+    write_body_idx_ = 0;
 }
 
 EventRecorder::EventRecorder(int parent_client_fd)
@@ -40,6 +41,7 @@ EventRecorder::EventRecorder(int parent_client_fd)
     chunked_current_read_length_ = 0;
     chunekd_total_read_length_ = 0;
     pipe_mode_ = -1;
+    write_body_idx_ = 0;
 }
 
 EventRecorder::~EventRecorder()
@@ -195,6 +197,17 @@ void EventRecorder::setSendCgiBody(std::string send_cgi_body)
     send_cgi_body_ = send_cgi_body;
 }
 
+void EventRecorder::setWriteBodyIndex(int idx)
+{
+    write_body_idx_ = idx;
+}
+
+void EventRecorder::sumWriteBodyIndex(int idx)
+{
+    write_body_idx_ += idx;
+}
+
+
 // getter
 
 size_t EventRecorder::getFdContentIndex(void)
@@ -320,4 +333,9 @@ Request& EventRecorder::getRequest()
 Response& EventRecorder::getResponse()
 {
     return (res_);
+}
+
+int EventRecorder::getWriteBodyIndex(void)
+{
+    return (write_body_idx_);
 }

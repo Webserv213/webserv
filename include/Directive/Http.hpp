@@ -7,7 +7,7 @@
 # include <fstream>
 
 # define DEFAULT_CONF_FILE_PATH "./conf/1webserv.conf"
-# define BUFFER_SIZE 100000
+# define BUFFER_SIZE 32767
 # define SAME 0
 # define HTTPBLOCK_CLOSE_OK 0
 

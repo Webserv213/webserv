@@ -582,7 +582,8 @@ void    KeventHandler::methodDeleteHandler(Server &server, Request &req, int cur
 
 bool    KeventHandler::isCgiRequest(int cur_fd, int idx, int loc_idx)
 {
-    int fd[2];
+    int send_fd[2];
+    int recv_fd[2];
 
     std::cout << "3.1\n";
     if (fd_manager_[cur_fd].getCgiStatus() != DONE_CGI && http_.getServer()[idx].getLocationBlock(loc_idx).getCgiPath() != "")
@@ -591,17 +592,43 @@ bool    KeventHandler::isCgiRequest(int cur_fd, int idx, int loc_idx)
         std::string clear_body = "";
         fd_manager_[cur_fd].setSendCgiBody(fd_manager_[cur_fd].getRequest().getBody());
         fd_manager_[cur_fd].getRequest().setBody(clear_body);
-        pipe(fd);
+        pipe(send_fd);
         EventRecorder pipe_event_recorder(cur_fd);
-        fd_manager_[fd[1]] = pipe_event_recorder;
-        fd_manager_[fd[0]] = pipe_event_recorder;
+        fd_manager_[send_fd[1]] = pipe_event_recorder;
+        fd_manager_[send_fd[0]] = pipe_event_recorder;
 
-        fd_manager_[cur_fd].setSendPipe(0, fd[0]);
-        fd_manager_[cur_fd].setSendPipe(1, fd[1]);
-        fd_manager_[fd[1]].setCgiStatus(WRITE_CGI);
+        fd_manager_[cur_fd].setSendPipe(0, send_fd[0]);
+        fd_manager_[cur_fd].setSendPipe(1, send_fd[1]);
         fd_manager_[cur_fd].setCgiPath(http_.getServer()[idx].getLocationBlock(loc_idx).getCgiPath());
-        changeEvents(change_list_, fd_manager_[cur_fd].getSendPipe(1), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
-        changeEvents(change_list_, cur_fd , EVFILT_READ, EV_DELETE, 0, 0, NULL);
+
+        pipe(recv_fd);
+        // EventRecorder pipe_event_recorder(cur_fd);
+        fd_manager_[recv_fd[1]] = pipe_event_recorder;
+        fd_manager_[recv_fd[0]] = pipe_event_recorder;
+
+        fd_manager_[cur_fd].setReceivePipe(0, recv_fd[0]);
+        fd_manager_[cur_fd].setReceivePipe(1, recv_fd[1]);
+
+        int pid = fork();
+        if (pid == 0) //child
+        {
+            char **env;
+            char *path[2];
+
+            env = createEnv(cur_fd);
+            path[0] = (char*)fd_manager_[cur_fd].getCgiPath().c_str();
+            path[1] = 0;
+            connectPipe(cur_fd);
+            if (execve((char*)fd_manager_[cur_fd].getCgiPath().c_str(), path, env) < 0)
+                std::runtime_error("error\n");
+        }
+        else //parents
+        {
+            closePipes(cur_fd);
+            fd_manager_[fd_manager_[cur_fd].getSendPipe(1)].setCgiStatus(WRITE_CGI);
+            changeEvents(change_list_, fd_manager_[cur_fd].getSendPipe(1), EVFILT_WRITE, EV_ADD, 0, 0, NULL);
+            changeEvents(change_list_, cur_fd , EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        }
         return (true);
     }
     std::cout << "3.2\n";
@@ -1050,17 +1077,18 @@ std::string parsingCgiBody(std::string str)
     return (buf);
 }
 
-bool KeventHandler::isPipeFile(unsigned int file_fd)
+int KeventHandler::isPipeFile(unsigned int file_fd)
 {
+    std::cout << "pipe read!\n";
     std::string str;
+    int parent_fd = fd_manager_[file_fd].getParentClientFd();
 
-    if (fd_manager_[file_fd].getCgiStatus() != READ_CGI)
-        return (false);
     str = parsingCgiBody(charVectorToString(fd_content_[file_fd]));
-    fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().setBody(str);
-    fd_manager_[file_fd].setCgiStatus(DONE_CGI);
-    close(file_fd);
-    return (true);
+    fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().addBody(str);
+    changeEvents(change_list_, file_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+    changeEvents(change_list_, fd_manager_[parent_fd].getSendPipe(1), EVFILT_WRITE, EV_ADD, 0, 0, NULL);
+    fd_manager_[fd_manager_[parent_fd].getSendPipe(1)].setCgiStatus(WRITE_CGI);
+    return (IDLE);
 }
 
 int KeventHandler::readFdFlag(struct kevent* curr_event)
@@ -1068,7 +1096,6 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
     char    buf[BUFFER_SIZE];
     int     n = 0;
 
-    std::cout << "pipe read!\n";
     if (fd_content_.find(curr_event->ident) != fd_content_.end())
     {
         memset(buf, 0, BUFFER_SIZE);
@@ -1083,9 +1110,15 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
             return (addSegmentReqAndReadMode(curr_event));
         else
         {
-            if (isPipeFile(curr_event->ident))
+            if (fd_manager_[curr_event->ident].getCgiStatus() != READ_CGI)
+                return (READ_FINISH_FILE);
+            if (n == 0 && fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
+            {
+                std::cout << "pipe read end!\n";
+                fd_manager_[curr_event->ident].setCgiStatus(DONE_CGI);
                 return (READ_FINISH_REQUEST);
-            return (READ_FINISH_FILE);
+            }
+            return (isPipeFile(curr_event->ident));
         }
         // fd_content에서 crlf 확인하기
         
@@ -1205,9 +1238,6 @@ void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
 
 void KeventHandler::closePipes(int parent_fd)
 {
-    close(fd_manager_[parent_fd].getSendPipe(1));
-    fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(1));
-
     close(fd_manager_[parent_fd].getSendPipe(0));
     fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(0));
 
@@ -1253,8 +1283,8 @@ void KeventHandler::createPipe(int parent_fd)
 
     pipe(fd);
     EventRecorder pipe_event_recorder(parent_fd);
-    fd_manager_[fd[1]] = pipe_event_recorder;
     fd_manager_[fd[0]] = pipe_event_recorder;
+    fd_manager_[fd[1]] = pipe_event_recorder;
 
     fd_manager_[parent_fd].setReceivePipe(0, fd[0]);
     fd_manager_[parent_fd].setReceivePipe(1, fd[1]);
@@ -1286,51 +1316,65 @@ void KeventHandler::createPipe(int parent_fd)
 //cgi pipe 쓰기 fd
 void KeventHandler::executeCgi(struct kevent* curr_event)
 {
-    pid_t pid;
+    std::cout << "pipe write!\n";
     int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
 
-    std::cout << "occur event! 2.1\n";
-    fd_manager_[curr_event->ident].setCgiStatus(-1);
-    std::cout << "body size : " << fd_manager_[parent_fd].getRequest().getBody().size() << std::endl;
+    int cur_write_size = 0;
+    if (fd_manager_[parent_fd].getRequest().getBody().size() > (size_t)(fd_manager_[curr_event->ident].getWriteBodyIndex() + 32767))
+        cur_write_size = 100;
+    else
+        cur_write_size = fd_manager_[parent_fd].getRequest().getBody().size() - fd_manager_[curr_event->ident].getWriteBodyIndex();
+    int n = write(curr_event->ident, &(fd_manager_[parent_fd].getRequest().getBody().c_str()[fd_manager_[curr_event->ident].getWriteBodyIndex()]), cur_write_size);
+    if (n < 0)
+        throw(std::runtime_error("cgi write error\n"));
+    fd_manager_[curr_event->ident].sumWriteBodyIndex(cur_write_size);
+
+    changeEvents(change_list_, curr_event->ident, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+    changeEvents(change_list_, fd_manager_[parent_fd].getReceivePipe(0), EVFILT_READ, EV_ADD, 0, 0, NULL);
+    fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setCgiStatus(READ_CGI);
+    fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setEventReadFile(1);
+    // std::cout << "occur event! 2.1\n";
+    // fd_manager_[curr_event->ident].setCgiStatus(-1);
+    // std::cout << "body size : " << fd_manager_[parent_fd].getRequest().getBody().size() << std::endl;
     // std::cout << "body : " << "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[" << fd_manager_[parent_fd].getRequest().getBody();
     // std::cout << "]]]]]]]]]]]]]]]]]]]]]]]]]]]\n";
     // writeData(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody());
-    int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getBody().size());
+    // int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), fd_manager_[parent_fd].getRequest().getBody().size());
     // int n = write(curr_event->ident, fd_manager_[parent_fd].getRequest().getBody().c_str(), 100);
-    if (n < 0)
-    {
-        write(2, "occur event! 2.1 erorr\n", 24);
-        std::runtime_error("cgi write error\n");
-    }
-    std::cout << "occur event! 2.2\n";
-    createPipe(parent_fd);
-    std::cout << "occur event! 2.3\n";
-    pid = fork();
-    if (pid == 0)
-    {
-        std::cout << "occur event! 2.3.1 child\n";
-        char **env;
-        char *path[2];
+    // if (n < 0)
+    // {
+    //     write(2, "occur event! 2.1 erorr\n", 24);
+    //     std::runtime_error("cgi write error\n");
+    // }
+    // std::cout << "occur event! 2.2\n";
+    // createPipe(parent_fd);
+    // std::cout << "occur event! 2.3\n";
+    // pid = fork();
+    // if (pid == 0)
+    // {
+    //     std::cout << "occur event! 2.3.1 child\n";
+    //     char **env;
+    //     char *path[2];
 
-        env = createEnv(parent_fd);
-        path[0] = (char*)fd_manager_[parent_fd].getCgiPath().c_str();
-        path[1] = 0;
-        connectPipe(parent_fd);
-        if (execve((char*)fd_manager_[parent_fd].getCgiPath().c_str(), path, env) < 0)
-            std::runtime_error("error\n");
-    }
-    else
-    {
-        std::cout << "occur event! 2.3.1 parents\n";
-        closePipes(parent_fd);
-        waitpid(-1, 0, 0);
-        fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setCgiStatus(READ_CGI);
-        fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setEventReadFile(1);   // 이건 파일이다.
-        fd_content_[fd_manager_[parent_fd].getReceivePipe(0)];
-        changeEvents(change_list_, fd_manager_[parent_fd].getReceivePipe(0), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-        std::cout << "run!\n";
-    }
-    std::cout << "occur event! 3\n";
+    //     env = createEnv(parent_fd);
+    //     path[0] = (char*)fd_manager_[parent_fd].getCgiPath().c_str();
+    //     path[1] = 0;
+    //     connectPipe(parent_fd);
+    //     if (execve((char*)fd_manager_[parent_fd].getCgiPath().c_str(), path, env) < 0)
+    //         std::runtime_error("error\n");
+    // }
+    // else
+    // {
+    //     std::cout << "occur event! 2.3.1 parents\n";
+    //     closePipes(parent_fd);
+    //     waitpid(-1, 0, 0);
+    //     fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setCgiStatus(READ_CGI);
+    //     fd_manager_[fd_manager_[parent_fd].getReceivePipe(0)].setEventReadFile(1);   // 이건 파일이다.
+    //     fd_content_[fd_manager_[parent_fd].getReceivePipe(0)];
+    //     changeEvents(change_list_, fd_manager_[parent_fd].getReceivePipe(0), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    //     std::cout << "run!\n";
+    // }
+    // std::cout << "occur event! 3\n";
 }
 
 int KeventHandler::transferFd(uintptr_t fd)
