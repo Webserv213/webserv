@@ -20,7 +20,7 @@ ReqHeaders& Request::getHeaders()
     return (headers_);
 }
 
-std::string& Request::getBody(void)
+std::string Request::getBody(void)
 {
     return (body_);
 }
@@ -34,6 +34,11 @@ void Request::setBody(std::string body)
 {
     body_.clear();
     body_ = body;
+}
+
+void Request::bodyClear()
+{
+    body_.clear();
 }
 
 // void Request::methodGetHandler(Server &server, )

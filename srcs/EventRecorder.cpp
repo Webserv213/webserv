@@ -20,6 +20,7 @@ EventRecorder::EventRecorder()
     chunekd_total_read_length_ = 0;
     pipe_mode_ = -1;
     write_body_idx_ = 0;
+    remain_write_cgi_data_ = 0;
 }
 
 EventRecorder::EventRecorder(int parent_client_fd)
@@ -42,6 +43,7 @@ EventRecorder::EventRecorder(int parent_client_fd)
     chunekd_total_read_length_ = 0;
     pipe_mode_ = -1;
     write_body_idx_ = 0;
+    remain_write_cgi_data_ = 0;
 }
 
 EventRecorder::~EventRecorder()
@@ -159,6 +161,7 @@ void EventRecorder::clearChunkedLengthTemp(void)
 
 void EventRecorder::setRequest(Request req)
 {
+    req_.bodyClear();
     req_ = req;
 }
 
@@ -205,6 +208,11 @@ void EventRecorder::setWriteBodyIndex(int idx)
 void EventRecorder::sumWriteBodyIndex(int idx)
 {
     write_body_idx_ += idx;
+}
+
+void EventRecorder::setRemainWriteCgiData(int n)
+{
+    remain_write_cgi_data_ = n;
 }
 
 
@@ -338,4 +346,9 @@ Response& EventRecorder::getResponse()
 int EventRecorder::getWriteBodyIndex(void)
 {
     return (write_body_idx_);
+}
+
+int EventRecorder::getRemainWriteCgiData(void)
+{
+    return (remain_write_cgi_data_);
 }

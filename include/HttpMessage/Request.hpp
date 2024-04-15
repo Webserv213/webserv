@@ -17,10 +17,11 @@ private:
 public:
     RequestLine& getRequestLine();
     ReqHeaders& getHeaders();
-    std::string& getBody();
+    std::string getBody();
     void methodGetHandler(Server& server);
     void addBody(std::string body);
     void setBody(std::string body);
+    void bodyClear();
     Request();
     ~Request();
 };

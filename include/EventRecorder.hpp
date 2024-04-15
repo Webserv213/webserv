@@ -51,6 +51,7 @@ private:
     int pipe_mode_;
     std::string send_cgi_body_;
     int write_body_idx_;
+    int remain_write_cgi_data_;
 
     std::vector<char>   chunked_length_temp_;
     Request req_;
@@ -61,6 +62,7 @@ public:
     EventRecorder(int parent_client_fd);
     ~EventRecorder();
 
+    void setRemainWriteCgiData(int n);
     void setFdContentIndex(int n);
     void setEventReadFile(int flag);
     void setEventWriteRes(int flag);
@@ -90,6 +92,7 @@ public:
     void setWriteBodyIndex(int idx);
     void sumWriteBodyIndex(int idx);
 
+    int getRemainWriteCgiData(void);
     size_t getFdContentIndex(void);
     int getEventReadFile(void);
     int getEventWriteRes(void);
