@@ -197,6 +197,7 @@ void EventRecorder::setPipeMode(int pipe_mode)
 
 void EventRecorder::setSendCgiBody(std::string send_cgi_body)
 {
+    send_cgi_body_.clear();
     send_cgi_body_ = send_cgi_body;
 }
 
