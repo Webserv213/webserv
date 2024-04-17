@@ -735,10 +735,10 @@ void KeventHandler::createResponse(unsigned int cur_fd)
     res_tmp += (fd_manager_[parent_fd].getResponse().getStatusLine().getVersion() + " ");
     res_tmp += (fd_manager_[parent_fd].getResponse().getStatusLine().getStatusCode() + " ");
     res_tmp += (fd_manager_[parent_fd].getResponse().getStatusLine().getStatusText() + "\r\n");
-    res_tmp += ("Date: " + fd_manager_[parent_fd].getResponse().getHeaders().getDate() + "\n");
-    res_tmp += ("Content-Type: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentType() + "\n");
-    res_tmp += ("Content-Length: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentLength() + "\n");
-    res_tmp += ("Connection: " + fd_manager_[parent_fd].getResponse().getHeaders().getConnection() + "\n");
+    res_tmp += ("Date: " + fd_manager_[parent_fd].getResponse().getHeaders().getDate() + "\r\n");
+    res_tmp += ("Content-Type: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentType() + "\r\n");
+    res_tmp += ("Content-Length: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentLength() + "\r\n");
+    res_tmp += ("Connection: " + fd_manager_[parent_fd].getResponse().getHeaders().getConnection() + "\r\n");
     res_tmp += ("Keep-Alive: " + fd_manager_[parent_fd].getResponse().getHeaders().getKeepAlive() + "\r\n");
     res_tmp += "\r\n" + charVectorToString(fd_manager_[parent_fd].getResponse().getBody());
     fd_content_[parent_fd] = stringToCharVector(res_tmp);
@@ -791,15 +791,18 @@ void    KeventHandler::createFile(struct kevent* curr_event)
 
 
 // void    KeventHandler::sendResponse(struct kevent* curr_event)
-void    KeventHandler::sendResponse(unsigned int curr_event_fd)
+void    KeventHandler::sendResponse(unsigned int curr_event_fd, long write_able_buffer)
 {
     // std::cout << "sendResponse()" << std::endl;
     // std::cout << "fd_content_[curr_event_fd].size() : " << fd_content_[curr_event_fd].size() << std::endl;
     // std::cout << "fd_content_[curr_event_fd] : " << charVectorToString(fd_content_[curr_event_fd]) << std::endl;
+    // std::cout << "fd_content_[curr_event_fd] : -----";
+    // printCharVectorCRLF(fd_content_[curr_event_fd]);
+    // std::cout << "-----" << std::endl;
 
     int cur_write_size = 0;
-    if (fd_content_[curr_event_fd].size() > (size_t)(fd_manager_[curr_event_fd].getWriteBodyIndex() + 32767))
-        cur_write_size = 32767;
+    if (fd_content_[curr_event_fd].size() > (size_t)(fd_manager_[curr_event_fd].getWriteBodyIndex() + write_able_buffer))
+        cur_write_size = write_able_buffer;
     else
         cur_write_size = fd_content_[curr_event_fd].size() - fd_manager_[curr_event_fd].getWriteBodyIndex();
  
@@ -819,9 +822,6 @@ void    KeventHandler::sendResponse(unsigned int curr_event_fd)
     int n = write(curr_event_fd, &(*(fd_content_[curr_event_fd].begin() + fd_manager_[curr_event_fd].getWriteBodyIndex())), cur_write_size);
 
     // int n = write(curr_event->ident, &(fd_manager_[parent_fd].getRequest().getBody().c_str()[fd_manager_[curr_event->ident].getWriteBodyIndex()]), cur_write_size);
-
-
-    
     if (n == -1)
     {
         std::cerr << "client write error!" << std::endl;
@@ -1550,7 +1550,7 @@ void KeventHandler::runServer(void)
                 //     break ;
 
                 case SEND_RESPONSE :
-                    sendResponse(curr_event->ident);
+                    sendResponse(curr_event->ident, curr_event->data);
                     break ;
 
                 case EDIT_FILE :

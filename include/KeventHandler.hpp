@@ -66,7 +66,7 @@ private:
     void    executeMethod(int curr_event);
     void    createResponse(unsigned int cur_fd);
     void    createResponseAutoindex(int curr_event_fd, std::string file_path);
-    void    sendResponse(unsigned int curr_event_fd);
+    void    sendResponse(unsigned int curr_event_fd, long write_able_buffer);
     void    setServerSocket(struct sockaddr_in *server_addr, Server server);
     bool    createClientSocket(struct kevent* curr_event);
     int     getEventFlag(struct kevent* curr_event);
