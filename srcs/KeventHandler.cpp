@@ -811,7 +811,6 @@ void    KeventHandler::sendResponse(unsigned int curr_event_fd, long write_able_
     {
         std::cout << "cur_write_size: " << cur_write_size << std::endl;
         fd_content_[curr_event_fd].clear();
-        fd_manager_[curr_event_fd].setEventWriteRes(-1);
         changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_ADD, 0, 0, &fd_manager_[curr_event_fd]);
         EventRecorder n;
@@ -868,7 +867,8 @@ void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)
         if (buf == "\r")  // \r이 없는 경우 처리해야할지 고민하기
         {
             std::getline(full_content, buf);
-            req.addBody(buf);
+            // std::cout << "req.addBody(buf) : -----" << buf << "-----" << std::endl;
+            // req.addBody(buf);
         }
         else
         {
@@ -913,6 +913,13 @@ void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)
 // 나누어져서 들어오는 Request 메시지를 조립하는 함수
 int KeventHandler::readReqHeader(struct kevent* curr_event)
 {
+    // std::cout << "requset header : -----";
+    // printCharVector(fd_content_[curr_event->ident]);
+    // std::cout << "-----";
+    // std::cout << "requset header CRLF: -----";
+    // printCharVectorCRLF(fd_content_[curr_event->ident]);
+    // std::cout << "-----";
+
     size_t  i = fd_manager_[curr_event->ident].getFdContentIndex();
 
     for (; i < fd_content_[curr_event->ident].size(); i++)
@@ -998,6 +1005,8 @@ void    KeventHandler::readChunkedData(struct kevent* curr_event, std::string ch
     //     read_chunked_data_res = READ_FINISH_REQUEST;
     // else
     // {
+    // std::cout << "chunk_split : -----" << chunk_split << "-----" << std::endl;
+    // std::cout << "ChunkedCrLf: [" << fd_manager_[curr_event->ident].getChunkedCrLf() << "]" << std::endl;
     fd_manager_[curr_event->ident].getRequest().addBody(chunk_split);
     fd_manager_[curr_event->ident].getRequest().setBody(fd_manager_[curr_event->ident].getRequest().getBody());
     fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
@@ -1246,7 +1255,7 @@ int  KeventHandler::writeFdFlag(struct kevent* curr_event)
     {
         if (fd_content_[curr_event->ident].size() != 0 && fd_manager_[curr_event->ident].getEventWriteRes() == 1)
         {
-            std::cout << "SEND_RESPONSE flag" << std::endl;
+            // std::cout << "SEND_RESPONSE flag" << std::endl;
             // std::cout << "send response!" << std::endl;
             // std::cout << charVectorToString(fd_content_[curr_event->ident]) << std::endl;
             return (SEND_RESPONSE);
