@@ -16,6 +16,7 @@ private:
     std::string     upgrade_insecure_requests_;
     std::string     user_agent_;
     std::string     transfer_encoding_;
+    std::string     x_secret_header_for_test_;
 
 public:
     ReqHeaders();
@@ -31,6 +32,7 @@ public:
     void    setUpgradeInsecureRequests(std::string& upgrade_insecure_requests);
     void    setUserAgent(std::string& user_agent);
     void    setTransferEncoding(std::string& transfer_encoding);
+    void    setXSecretHeaderForTest(std::string& x_secret_header_for_test);
 
     int             getContentLength();
     std::string     getContentType();
@@ -44,6 +46,7 @@ public:
     std::string     getUpgradeInsecureRequests();
     std::string     getUserAgent();
     std::string     getTransferEncoding();
+    std::string     getXSecretHeaderForTest();
 };
 
 #endif

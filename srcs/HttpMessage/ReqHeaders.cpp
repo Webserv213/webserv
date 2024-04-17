@@ -125,6 +125,11 @@ void    ReqHeaders::setTransferEncoding(std::string& transfer_encoding)
     this->transfer_encoding_ = transfer_encoding;
 }
 
+void    ReqHeaders::setXSecretHeaderForTest(std::string& x_secret_header_for_test)
+{
+    this->x_secret_header_for_test_ = x_secret_header_for_test;
+}
+
 //getter
 
 int             ReqHeaders::getContentLength()
@@ -187,3 +192,7 @@ std::string     ReqHeaders::getTransferEncoding()
     return (transfer_encoding_);
 }
 
+std::string     ReqHeaders::getXSecretHeaderForTest()
+{
+    return(x_secret_header_for_test_);
+}

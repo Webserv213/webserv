@@ -891,6 +891,8 @@ void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)
                 req.getHeaders().setUpgradeInsecureRequests(value);
             else if (key == "User-Agent:")
                 req.getHeaders().setUserAgent(value);
+            else if (key == "X-Secret-Header-For-Test:")
+                req.getHeaders().setXSecretHeaderForTest(value);
             else if (key == "Content-Length:")
             {
                 int length = std::atoi(&value[0]);
@@ -913,12 +915,12 @@ void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)
 // 나누어져서 들어오는 Request 메시지를 조립하는 함수
 int KeventHandler::readReqHeader(struct kevent* curr_event)
 {
-    // std::cout << "requset header : -----";
-    // printCharVector(fd_content_[curr_event->ident]);
-    // std::cout << "-----";
-    // std::cout << "requset header CRLF: -----";
-    // printCharVectorCRLF(fd_content_[curr_event->ident]);
-    // std::cout << "-----";
+    std::cout << "requset header : -----";
+    printCharVector(fd_content_[curr_event->ident]);
+    std::cout << "-----";
+    std::cout << "requset header CRLF: -----";
+    printCharVectorCRLF(fd_content_[curr_event->ident]);
+    std::cout << "-----";
 
     size_t  i = fd_manager_[curr_event->ident].getFdContentIndex();
 
@@ -1193,7 +1195,7 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
             return (CLOSE_CONNECTION);
         if (n < 0)
             return (READ_ERROR);
-        std::cout << "n : " << n << "\n";
+        // std::cout << "n : " << n << "\n";
         // buf[n] = '\0';
         addContent(curr_event, buf, n);
         if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
@@ -1359,11 +1361,12 @@ char** KeventHandler::createEnv(int parent_fd)
 {
     char **env;
 
-    env = new char *[5];
+    env = new char *[6];    
     std::string str0 = "REQUEST_METHOD=" + fd_manager_[parent_fd].getRequest().getRequestLine().getMethod();
     std::string str1 = "SERVER_PROTOCOL=" + fd_manager_[parent_fd].getRequest().getRequestLine().getVersion();
     std::string str2 = "PATH_INFO=/";
     std::string str3 = "CONTENT_LENGTH=" + std::to_string(fd_manager_[parent_fd].getRequest().getBody().size());
+    std::string str4 = "HTTP_X_SECRET_HEADER_FOR_TEST=" + fd_manager_[parent_fd].getRequest().getHeaders().getXSecretHeaderForTest();
     env[0] = new char[str0.size() + 1];
     strcpy(env[0], str0.c_str());
     env[1] = new char[str1.size() + 1];
@@ -1372,7 +1375,9 @@ char** KeventHandler::createEnv(int parent_fd)
     strcpy(env[2], str2.c_str());
     env[3] = new char[str3.size() + 1];
     strcpy(env[3], str3.c_str());
-    env[4] = NULL;
+    env[4] = new char[str4.size() + 1];
+    strcpy(env[4], str4.c_str());
+    env[5] = NULL;
 
     return (env);
 }
