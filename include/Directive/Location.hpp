@@ -30,7 +30,7 @@ public:
     std::vector<std::string>    getAccessMethod();
     std::string                 getRoot();
     bool                        getAutoIndex();
-    unsigned long long          getClientMaxBodySize();
+    long long                   getClientMaxBodySize();
     std::string                 getIndex();
     std::string                 getCgiPath();
 
@@ -39,7 +39,7 @@ public:
     void setRoot(std::string &root);
     void setIndex(std::string &index);
     void setAutoIndex(bool flag);
-    void setClientMaxBodySize(unsigned long long client_max_body_size);
+    void setClientMaxBodySize(long long client_max_body_size);
     void setUrlPostfix(std::string  url_postfix);
     void setAccessMethod(std::string  access_method);
     void setErrorPage(std::string error_code, std::string &path);

@@ -4,7 +4,7 @@
 Location::Location(void)
 {
     autoindex_ = false;
-    client_max_body_size_ = 10000;
+    client_max_body_size_ = -1;
     error_page_["404"] = "./var/www/error";
     cgi_path_ = "";
 }
@@ -51,7 +51,7 @@ bool Location::getAutoIndex()
     return (autoindex_);
 }
 
-unsigned long long Location::getClientMaxBodySize()
+long long Location::getClientMaxBodySize()
 {
     return (client_max_body_size_);
 }
@@ -78,7 +78,7 @@ void Location::setAutoIndex(bool flag)
     autoindex_ = flag;
 }
 
-void Location::setClientMaxBodySize(unsigned long long client_max_body_size)
+void Location::setClientMaxBodySize(long long client_max_body_size)
 {
     client_max_body_size_ = client_max_body_size;
 }

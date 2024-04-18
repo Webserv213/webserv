@@ -6,7 +6,7 @@ Server::Server(void)
     server_name_="webserv.com";
     root_ = "./var/www/default";
     autoindex_ = false;
-    client_max_body_size_ = 10000;
+    client_max_body_size_ = -1;
     error_page_["404"] = "./var/www/error";
     index_ = "index.html";
 }
@@ -108,7 +108,7 @@ void Server::setAutoIndex(bool flag)
     autoindex_ = flag;
 }
 
-void Server::setClientMaxBodySize(unsigned long long client_max_body_size)
+void Server::setClientMaxBodySize(long long client_max_body_size)
 {
     client_max_body_size_ = client_max_body_size;
 }
@@ -144,7 +144,7 @@ bool Server::getAutoIndex(void)
     return (autoindex_);
 }
 
-unsigned long long Server::getClientMaxBodySize(void)
+long long Server::getClientMaxBodySize(void)
 {
     return (client_max_body_size_);
 }

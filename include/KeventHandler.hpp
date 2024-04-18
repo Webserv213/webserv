@@ -102,6 +102,7 @@ private:
     // method_error
     void notFound404(int curr_event_fd);
     void notAllowedMethod405(int curr_event_fd);
+    void requestEntityTooLarge413(int curr_event_fd);
 
     // method_utils
     void setReadFileEvent(int curr_event_fd, int fd);

@@ -133,7 +133,7 @@ void KeventHandler::openListenSocket()
         if (bind(listen_socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
             throw(std::runtime_error("bind() error\n"));
 
-        if (listen(listen_socket_fd, 50) == -1)
+        if (listen(listen_socket_fd, 500) == -1)
             throw(std::runtime_error("listen() error\n"));
         fcntl(listen_socket_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 
@@ -388,6 +388,20 @@ void KeventHandler::notAllowedMethod405(int curr_event_fd)
     setReadFileEvent(curr_event_fd, fd);
 }
 
+void KeventHandler::requestEntityTooLarge413(int curr_event_fd)
+{
+    int fd;
+
+    fd = open ("./var/www/error/error_413.html", O_RDONLY);
+    if (fd < 0)   // fd 에러 처리하기
+        throw (std::runtime_error("413 OPEN ERROR"));
+    fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("413");
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Request Entity Too Large");
+
+    setReadFileEvent(curr_event_fd, fd);
+}
+
 void KeventHandler::notFound404(int curr_event_fd)
 {
     int fd;
@@ -441,6 +455,13 @@ void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
 void KeventHandler::methodPostHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size)
 {
     bool    is_allow_method;
+
+    if (server.getLocationBlock(loc_idx).getClientMaxBodySize() != -1
+        && fd_manager_[curr_event_fd].getRequest().getBody().size() > (size_t)server.getLocationBlock(loc_idx).getClientMaxBodySize())
+    {
+        requestEntityTooLarge413(curr_event_fd);
+        return ;
+    }
 
     std::cout << "5 [post in]\n";
     is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
