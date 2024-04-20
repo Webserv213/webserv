@@ -27,7 +27,7 @@ std::string Request::getBody(void)
 
 void Request::addBody(std::string body)
 {
-    body_ += body;
+    body_.append(body);
 }
 
 void Request::setBody(std::string body)

@@ -1,6 +1,9 @@
 #include "KeventHandler.hpp"
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+
+long long previous_time;
 
 KeventHandler::KeventHandler(Http &http): http_(http)
 {
@@ -356,7 +359,7 @@ std::string KeventHandler::createFilePath(Server &server, Request &req, int loc_
         // req.getRequestLine().getRequestTarget()[i] dir 검사하는 로직 (근데 마지막은 파일이어야함) -> 아니면 404 에러 던지기
         file_path += req.getRequestLine().getRequestTarget()[i];
     }
-    std::cout << "createFilePath\n";
+    // std::cout << "createFilePath\n";
     return (file_path);
 }
 
@@ -420,12 +423,12 @@ void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
 {
     int fd;
 
-    std::cout << "file_path :" << file_path << std::endl;
+    // std::cout << "file_path :" << file_path << std::endl;
     fd = open(file_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
     if (fd < 0)
         std::runtime_error("file open [post]");
 
-    std::cout << "file fd: " << fd << "\n";
+    // std::cout << "file fd: " << fd << "\n";
 
     fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
     fd_content_[fd] = fd_manager_[curr_event_fd].getRequest().getBody();    // fd_content[fd]에 request 받아온 body 넣어주기
@@ -511,7 +514,7 @@ void KeventHandler::openFile(std::string file_path, int curr_event_fd)
     int fd;
     struct stat st;
 
-    std::cout << "file_path: " << file_path << std::endl;
+    // std::cout << "file_path: " << file_path << std::endl;
     fd = open (file_path.c_str(), O_RDONLY);
     if (fd < 0)
         notFound404(curr_event_fd);
@@ -640,6 +643,13 @@ bool    KeventHandler::isCgiRequest(int cur_fd, int idx, int loc_idx)
             changeEvents(change_list_, fd_manager_[cur_fd].getSendPipe(1), EVFILT_WRITE, EV_ADD, 0, 0, NULL);
             changeEvents(change_list_, fd_manager_[cur_fd].getReceivePipe(0), EVFILT_READ, EV_ADD, 0, 0, NULL);
             changeEvents(change_list_, cur_fd , EVFILT_READ, EV_DELETE, 0, 0, NULL);
+
+            struct timeval tv;
+            gettimeofday(&tv, NULL);
+            long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+            long long time_diff = milliseconds - previous_time;
+            previous_time = milliseconds;
+            std::cout << "CGI와 연결한 파이프에 쓰기 시작 : " << time_diff << std::endl;
         }
         return (true);
     }
@@ -783,6 +793,14 @@ void    KeventHandler::createFile(struct kevent* curr_event)
         // disconnectClient(curr_event->ident);
         fd_manager_[curr_event->ident].setFdError(1);
     }
+
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+    long long time_diff = milliseconds - previous_time;
+    previous_time = milliseconds;
+    std::cout << "파일에 1억개 다씀 : " << time_diff << std::endl;
+
     fd_manager_[parent_fd].getResponse().getStatusLine().setStatusCode("200");
     fd_manager_[parent_fd].getResponse().getStatusLine().setStatusText("OK");
     createResponse(curr_event->ident);
@@ -808,9 +826,16 @@ void    KeventHandler::sendResponse(unsigned int curr_event_fd, long write_able_
     else
         cur_write_size = fd_content_[curr_event_fd].size() - fd_manager_[curr_event_fd].getWriteBodyIndex();
  
-    std::cout << "fd_manager_[curr_event_fd].getWriteBodyIndex(): " << fd_manager_[curr_event_fd].getWriteBodyIndex() << std::endl;
+    // std::cout << "fd_manager_[curr_event_fd].getWriteBodyIndex(): " << fd_manager_[curr_event_fd].getWriteBodyIndex() << std::endl;
     if (cur_write_size == 0)
     {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+        long long time_diff = milliseconds - previous_time;
+        previous_time = milliseconds;
+        std::cout << "테스터에 1억개 전달 완료: " << time_diff << std::endl;
+
         // std::cout << "cur_write_size: " << cur_write_size << std::endl;
         fd_content_[curr_event_fd].clear();
         changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
@@ -905,6 +930,11 @@ void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)
             {
                 req.getHeaders().setTransferEncoding(value);
                 fd_manager_[curr_event->ident].setReadType(READ_CHUNKED_BODY);
+
+                struct timeval tv;
+                gettimeofday(&tv, NULL);
+                previous_time = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+                std::cout << "테스터가 보내는 chunked body 읽기 시작 : " << 0 << std::endl;
             }
         }
     }
@@ -939,7 +969,7 @@ int KeventHandler::readReqHeader(struct kevent* curr_event)
     fd_manager_[curr_event->ident].setFdContentIndex(i);
     if (fd_manager_[curr_event->ident].getHeaderEof() == 4)
     {
-        std::cout << "----------------HEADER EOF----------------" << std::endl;
+        // std::cout << "----------------HEADER EOF----------------" << std::endl;
         std::string::iterator it = fd_content_[curr_event->ident].begin();
         parsingReqStartLineAndHeaders(curr_event);
         fd_content_[curr_event->ident].erase(it, it + i);
@@ -1004,7 +1034,7 @@ void    KeventHandler::readChunkedData(struct kevent* curr_event, std::string ch
     // std::cout << "chunk_split : -----" << chunk_split << "-----" << std::endl;
     // std::cout << "ChunkedCrLf: [" << fd_manager_[curr_event->ident].getChunkedCrLf() << "]" << std::endl;
     fd_manager_[curr_event->ident].getRequest().addBody(chunk_split);
-    fd_manager_[curr_event->ident].getRequest().setBody(fd_manager_[curr_event->ident].getRequest().getBody());
+    // fd_manager_[curr_event->ident].getRequest().setBody(fd_manager_[curr_event->ident].getRequest().getBody());
     fd_manager_[curr_event->ident].setChunkedDataType(CHUNKED_LENGTH);
     fd_manager_[curr_event->ident].setChunkedCrLf(0);
     // }
@@ -1074,8 +1104,15 @@ int KeventHandler::readChunkedBody(struct kevent* curr_event)
         if (fd_manager_[curr_event->ident].getChunkedDataType() == CHUNKED_DATA
             && fd_manager_[curr_event->ident].getChunkedTotalReadLength() == 0 && fd_manager_[curr_event->ident].getChunkedCrLf() == 2)
         {
+            struct timeval tv;
+            gettimeofday(&tv, NULL);
+            long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+            long long time_diff = milliseconds - previous_time;
+            previous_time = milliseconds;
+            std::cout << "테스터가 보낸 chunked body 다 읽음 : " << time_diff << std::endl;
+
             // std::cout << "sizs : " << fd_manager_[curr_event->ident].getRequest().getBody().size() << std::endl;
-            std::cout << "chunked body end\n";
+            // std::cout << "chunked body end\n";
             return (READ_FINISH_REQUEST);
         }    
 
@@ -1129,7 +1166,7 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event)
     return (res);
 }
 
-std::string parsingCgiBody(std::string str)
+std::string parsingCgiBody(std::string& str)
 {
     std::string buf;
     std::istringstream streamLine(str);
@@ -1146,11 +1183,11 @@ int KeventHandler::isPipeFile(unsigned int file_fd)
     // std::cout << "pipe read!\n";
     std::string str;
     int parent_fd = fd_manager_[file_fd].getParentClientFd();
-    str = parsingCgiBody(fd_content_[file_fd]);
+    // str = parsingCgiBody(fd_content_[file_fd]);
+
+    fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().addBody(parsingCgiBody(fd_content_[file_fd]));
     fd_content_[file_fd].clear();
-    
-    fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().addBody(str);
-    fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().setBody(fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().getBody());
+    // fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().setBody(fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().getBody());
     // if (fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().getBody().size() > 99990000)
     // {
     //     std::cout << "read size += " << fd_manager_[fd_manager_[file_fd].getParentClientFd()].getRequest().getBody().size() << std::endl;
@@ -1175,14 +1212,14 @@ int KeventHandler::isPipeFile(unsigned int file_fd)
 
 int KeventHandler::readFdFlag(struct kevent* curr_event)
 {
-    char    buf[BUFFER_SIZE];
+    std::vector<char> buf(500000, 0);
     int     n = 0;
 
     if (fd_content_.find(curr_event->ident) != fd_content_.end())
     {
-        memset(buf, 0, BUFFER_SIZE);
+        // memset(buf, 0, BUFFER_SIZE);
         // std::cout << "before read\n";
-        n = read(curr_event->ident, buf, BUFFER_SIZE - 1);
+        n = read(curr_event->ident, &buf[0], 500000);
         // std::cout << "after read\n";
         if (n < 0 && (curr_event->flags & EV_EOF))
             return (CLOSE_CONNECTION);
@@ -1190,7 +1227,7 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
             return (READ_ERROR);
         // std::cout << "n : " << n << "\n";
         // buf[n] = '\0';
-        addContent(curr_event, buf, n);
+        addContent(curr_event, &buf[0], n);
         if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
             return (addSegmentReqAndReadMode(curr_event));
         else
@@ -1202,7 +1239,14 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
             }
             if (n == 0 && fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
             {
-                std::cout << "pipe read end!\n";
+                struct timeval tv;
+                gettimeofday(&tv, NULL);
+                long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+                long long time_diff = milliseconds - previous_time;
+                previous_time = milliseconds;
+                std::cout << "CGI 파이프에 주고 받기 끝 (읽기쪽): " << time_diff << std::endl;
+
+                // std::cout << "pipe read end!\n";
                 fd_manager_[curr_event->ident].setCgiStatus(DONE_CGI);
                 fd_manager_[curr_event->ident].setSendCgiBody("");
                 return (READ_FINISH_REQUEST);
@@ -1324,7 +1368,8 @@ void KeventHandler::clientReadError(struct kevent* curr_event)
 void KeventHandler::addContent(struct kevent* curr_event, char buf[], int n)
 {
     // std::cout << "add content\n";
-    fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
+    // fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
+    fd_content_[curr_event->ident].append(buf, n);
 }
 
 void KeventHandler::closePipes(int parent_fd)
@@ -1414,7 +1459,7 @@ void KeventHandler::executeCgi(struct kevent* curr_event)
     int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
 
     int cur_write_size = 0;
-    std::cout << "execute Cgi possible size : " << curr_event->data << "\n";
+    // std::cout << "execute Cgi possible size : " << curr_event->data << "\n";
     if (fd_manager_[parent_fd].getSendCgiBody().size() > (size_t)(fd_manager_[curr_event->ident].getWriteBodyIndex() + curr_event->data))
         cur_write_size = curr_event->data;
     else
@@ -1425,6 +1470,13 @@ void KeventHandler::executeCgi(struct kevent* curr_event)
     fd_manager_[parent_fd].setRemainWriteCgiData(n);
     if (n == 0)
     {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+        long long time_diff = milliseconds - previous_time;
+        previous_time = milliseconds;
+        std::cout << "CGI 파이프에 주고 받기 끝 (쓰기쪽): " << time_diff << std::endl;
+
         // std::cout << "write n: " << n << std::endl;
         close(curr_event->ident);
         fd_manager_.erase(fd_manager_[parent_fd].getSendPipe(1));
