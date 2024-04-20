@@ -5,29 +5,6 @@
 # include <sstream>
 # include <sys/stat.h>
 
-void   printCharVector(std::vector<char>& vector_char)
-{
-    for (size_t i = 0; i < vector_char.size(); i++)
-        std::cout << vector_char[i];
-}
-
-std::vector<char>   stringToCharVector(std::string& str)
-{
-    std::vector<char> vector_char;
-    for (size_t i = 0; i < str.size(); i++)
-        vector_char.push_back(str[i]);
-    return (vector_char);
-}
-
-std::string charVectorToString(std::vector<char>& vector_char)
-{
-    std::string str;
-
-    for (size_t i = 0; i < vector_char.size(); i++)
-        str += vector_char[i];
-    return (str);
-}
-
 std::string getFileContents(std::string input_file_name)
 {
     std::ifstream input_file_stream(input_file_name.c_str());
@@ -161,17 +138,4 @@ bool existMethod(std::string method, std::vector<std::string> accessMethod)
             return (true);
     }
     return (false);
-}
-
-void   printCharVectorCRLF(std::vector<char>& vector_char)
-{
-    for (size_t i = 0; i < vector_char.size(); i++)
-    {
-        if (vector_char[i] == '\r')
-            std::cout << "\\r";
-        else if (vector_char[i] == '\n')
-            std::cout << "\\n";
-        else
-            std::cout << vector_char[i];
-    }
 }

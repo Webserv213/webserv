@@ -53,7 +53,6 @@ private:
     int write_body_idx_;
     int remain_write_cgi_data_;
 
-    std::vector<char>   chunked_length_temp_;
     Request req_;
     Response res_;
 
@@ -82,7 +81,6 @@ public:
     void setChunkedTotalReadLength(int chunked_total_read_length);
     void setRequest(Request req);
     void setResponse(Response& res);
-    void setChunkedLengthTemp(std::vector<char> chunked_length_temp);
     void setSendPipe(int idx, int fd);
     void setReceivePipe(int idx, int fd);
     void setCgiStatus(int status);
@@ -118,10 +116,7 @@ public:
     int getWriteBodyIndex(void);
 
     // utils
-    void pushbackChunkedLengthTemp(char c);
-    void clearChunkedLengthTemp(void);
     void incChunkedCurrentReadLength(void);
-    std::vector<char>& getChunkedLengthTemp();
     Request& getRequest();
     Response& getResponse();
 };

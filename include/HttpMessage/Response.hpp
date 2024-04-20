@@ -10,12 +10,12 @@ class Response
 private:
     ResponseLine        status_line_;
     ResHeaders          headers_;
-    std::vector<char>   body_;
+    std::string         body_;
 
 public:
     ResponseLine&       getStatusLine(void);
     ResHeaders&         getHeaders(void);
-    std::vector<char>&  getBody(void);
+    std::string&        getBody(void);
     void                addBody(std::string& body);
     Response();
     ~Response();

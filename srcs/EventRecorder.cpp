@@ -143,22 +143,6 @@ void    EventRecorder::setChunkedTotalReadLength(int chunked_total_read_length)
     chunekd_total_read_length_ = chunked_total_read_length;
 }
 
-void EventRecorder::setChunkedLengthTemp(std::vector<char> chunked_length_temp)
-{
-    chunked_length_temp_ = chunked_length_temp;
-}
-
-void EventRecorder::pushbackChunkedLengthTemp(char c)
-{
-    chunked_length_temp_.push_back(c);
-}
-
-void EventRecorder::clearChunkedLengthTemp(void)
-{
-    chunked_length_temp_.clear();
-}
-
-
 void EventRecorder::setRequest(Request req)
 {
     req_.bodyClear();
@@ -327,11 +311,6 @@ int EventRecorder::getPipeMode(void)
 std::string EventRecorder::getSendCgiBody(void)
 {
     return (send_cgi_body_);
-}
-
-std::vector<char>& EventRecorder::getChunkedLengthTemp()
-{
-    return (chunked_length_temp_);
 }
 
 Request& EventRecorder::getRequest()

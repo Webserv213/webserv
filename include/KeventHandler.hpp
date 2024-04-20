@@ -49,7 +49,7 @@ private:
     Http                                http_;
     std::vector<uintptr_t>              server_sockets_;
     std::map<int, EventRecorder>        fd_manager_;
-    std::map<int, std::vector<char> >   fd_content_;
+    std::map<int, std::string >         fd_content_;
     std::map<std::string, std::string>  mime_type_;
     std::vector<struct kevent>          change_list_;
 

@@ -19,7 +19,7 @@ ResHeaders&  Response::getHeaders(void)
     return (headers_);
 }
 
-std::vector<char>& Response::getBody(void)
+std::string& Response::getBody(void)
 {
     return(body_);
 }
