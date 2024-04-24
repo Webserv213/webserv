@@ -43,7 +43,7 @@ private:
     int chunked_cr_lf_; // chunked data의 cr lf 확인 플래그
     int chunked_data_type_;    // chunked data에서 길이인지 데이터인지 확인하는 플래그
     int chunked_current_read_length_;
-    int chunekd_total_read_length_;
+    size_t chunked_total_read_length_;
     std::string cgi_path_;
     int cgi_status_;
     int send_pipe_[2];
@@ -52,6 +52,7 @@ private:
     std::string send_cgi_body_;
     int write_body_idx_;
     int remain_write_cgi_data_;
+    size_t chunked_begin_idx_;
 
     Request req_;
     Response res_;
@@ -71,24 +72,25 @@ public:
     void setFdError(int flag);
     void setAutoindexFlag(int flag);
     void setReadType(int read_type);
-    void setHeaderEof(int header_eof);
+    void setHeaderCrLf(int header_eof);
     void setContentCurrentReadLength(int content_length_cnt);
     void incContentCurrentReadLength(void);
     void setChunkedEof(int chunked_eof);
     void setChunkedCrLf(int chunked_cr_lf);
     void setChunkedDataType(int chunked_data_type);
-    void setChunkedCurrentReadLength(int chunked_current_read_length);
-    void setChunkedTotalReadLength(int chunked_total_read_length);
-    void setRequest(Request req);
+    void setChunkedCurrentReadLength(size_t chunked_current_read_length);
+    void setChunkedTotalReadLength(size_t chunked_total_read_length);
+    void setRequest(Request& req);
     void setResponse(Response& res);
     void setSendPipe(int idx, int fd);
     void setReceivePipe(int idx, int fd);
     void setCgiStatus(int status);
     void setCgiPath(std::string path);
     void setPipeMode(int pipe_mode);
-    void setSendCgiBody(std::string send_cgi_body);
+    void setSendCgiBody(const std::string& send_cgi_body);
     void setWriteBodyIndex(int idx);
     void sumWriteBodyIndex(int idx);
+    void setChunkedBeginIndex(size_t idx);
 
     int getRemainWriteCgiData(void);
     size_t getFdContentIndex(void);
@@ -100,13 +102,13 @@ public:
     int getFdError(void);
     int getAutoindexFlag(void);
     int getReadType(void);
-    int getHeaderEof(void);
+    int getHeaderCrLf(void);
     int getContentCurrentReadLength(void);
     int getChunkedEof(void);
     int getChunkedCrLf(void);
     int getChunkedDataType(void);
-    int getChunkedCurrentReadLength(void);
-    int getChunkedTotalReadLength(void);
+    size_t getChunkedCurrentReadLength(void);
+    size_t getChunkedTotalReadLength(void);
     int getSendPipe(int idx);
     int getReceivePipe(int idx);
     int getCgiStatus(void);
@@ -114,6 +116,7 @@ public:
     int getPipeMode(void);
     std::string getSendCgiBody(void);
     int getWriteBodyIndex(void);
+    size_t getChunkedBeginIndex();
 
     // utils
     void incChunkedCurrentReadLength(void);

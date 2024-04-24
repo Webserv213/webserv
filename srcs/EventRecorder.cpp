@@ -17,10 +17,11 @@ EventRecorder::EventRecorder()
     chunked_cr_lf_ = 0;
     chunked_data_type_ = CHUNKED_LENGTH;
     chunked_current_read_length_ = 0;
-    chunekd_total_read_length_ = 0;
+    chunked_total_read_length_ = 0;
     pipe_mode_ = -1;
     write_body_idx_ = 0;
     remain_write_cgi_data_ = 0;
+    chunked_begin_idx_ = 0;
 }
 
 EventRecorder::EventRecorder(int parent_client_fd)
@@ -40,7 +41,7 @@ EventRecorder::EventRecorder(int parent_client_fd)
     chunked_cr_lf_ = 0;
     chunked_data_type_ = CHUNKED_LENGTH;
     chunked_current_read_length_ = 0;
-    chunekd_total_read_length_ = 0;
+    chunked_total_read_length_ = 0;
     pipe_mode_ = -1;
     write_body_idx_ = 0;
     remain_write_cgi_data_ = 0;
@@ -97,7 +98,7 @@ void EventRecorder::setReadType(int read_type)
     read_type_ = read_type;
 }
 
-void EventRecorder::setHeaderEof(int header_eof)
+void EventRecorder::setHeaderCrLf(int header_eof)
 {
     header_eof_ = header_eof;
 }
@@ -133,19 +134,18 @@ void    EventRecorder::setChunkedDataType(int chunked_data_type)
 }
 
 
-void    EventRecorder::setChunkedCurrentReadLength(int chunked_current_read_length)
+void    EventRecorder::setChunkedCurrentReadLength(size_t chunked_current_read_length)
 {
     chunked_current_read_length_ = chunked_current_read_length;
 }
 
-void    EventRecorder::setChunkedTotalReadLength(int chunked_total_read_length)
+void    EventRecorder::setChunkedTotalReadLength(size_t chunked_total_read_length)
 {
-    chunekd_total_read_length_ = chunked_total_read_length;
+    chunked_total_read_length_ = chunked_total_read_length;
 }
 
-void EventRecorder::setRequest(Request req)
+void EventRecorder::setRequest(Request& req)
 {
-    req_.bodyClear();
     req_ = req;
 }
 
@@ -179,9 +179,8 @@ void EventRecorder::setPipeMode(int pipe_mode)
     pipe_mode_ = pipe_mode;
 }
 
-void EventRecorder::setSendCgiBody(std::string send_cgi_body)
+void EventRecorder::setSendCgiBody(const std::string& send_cgi_body)
 {
-    send_cgi_body_.clear();
     send_cgi_body_ = send_cgi_body;
 }
 
@@ -200,6 +199,10 @@ void EventRecorder::setRemainWriteCgiData(int n)
     remain_write_cgi_data_ = n;
 }
 
+void EventRecorder::setChunkedBeginIndex(size_t idx)
+{
+    chunked_begin_idx_ = idx;
+}
 
 // getter
 
@@ -248,7 +251,7 @@ int EventRecorder::getReadType(void)
     return (read_type_);
 }
 
-int EventRecorder::getHeaderEof(void)
+int EventRecorder::getHeaderCrLf(void)
 {
     return (header_eof_);
 }
@@ -273,14 +276,14 @@ int EventRecorder::getChunkedDataType(void)
     return (chunked_data_type_);
 }
 
-int EventRecorder::getChunkedCurrentReadLength(void)
+size_t EventRecorder::getChunkedCurrentReadLength(void)
 {
     return (chunked_current_read_length_);
 }
 
-int EventRecorder::getChunkedTotalReadLength(void)
+size_t EventRecorder::getChunkedTotalReadLength(void)
 {
-    return (chunekd_total_read_length_);
+    return (chunked_total_read_length_);
 }
 
 int EventRecorder::getSendPipe(int idx)
@@ -331,4 +334,9 @@ int EventRecorder::getWriteBodyIndex(void)
 int EventRecorder::getRemainWriteCgiData(void)
 {
     return (remain_write_cgi_data_);
+}
+
+size_t  EventRecorder::getChunkedBeginIndex(void)
+{
+    return (chunked_begin_idx_);
 }

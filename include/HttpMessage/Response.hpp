@@ -16,7 +16,8 @@ public:
     ResponseLine&       getStatusLine(void);
     ResHeaders&         getHeaders(void);
     std::string&        getBody(void);
-    void                addBody(std::string& body);
+    void                addBody(const std::string& body);
+    void                setBody(const std::string& body);
     Response();
     ~Response();
 };

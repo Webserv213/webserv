@@ -17,6 +17,7 @@
 # include "Utils.hpp"
 
 # define EVENT_LIST_SIZE 100
+# define CRLF_LENGTH 2
 
 enum EventType
 {
@@ -72,7 +73,7 @@ private:
     int     getEventFlag(struct kevent* curr_event);
     void    socketError(struct kevent*  curr_event);
     void    clientReadError(struct kevent* curr_event);
-    void    addContent(struct kevent* curr_event, char buf[], int n);
+    void    addContent(struct kevent* curr_event, const char buf[], int n);
     bool    isSocket(struct kevent* curr_event);
     int     readFdFlag(struct kevent* curr_event);
     void    createFile(struct kevent* curr_event);
@@ -93,8 +94,8 @@ private:
     int     readReqHeader(struct kevent* curr_event);
     int     readContentBody(struct kevent* curr_event);
     int     readChunkedBody(struct kevent* curr_event);
-    void    readChunkedLength(struct kevent* curr_event, std::string chunk_split);
-    void    readChunkedData(struct kevent* curr_event, std::string chunk_split);
+    void    readChunkedLength(struct kevent* curr_event);
+    int     readChunkedData(struct kevent* curr_event);
 
     //req parsing utils
     void    parsingReqStartLineAndHeaders(struct kevent* curr_event);
@@ -117,7 +118,7 @@ private:
     bool checkCgi(Request req, Location loc, std::string extension);
 
     int transferFd(uintptr_t fd);
-    int isPipeFile(unsigned int file_fd);
+    int isPipeFile(struct kevent* curr_event);
     bool isCgiRequest(int cur_fd, int idx, int loc_idx);
     bool isRightMethod(Request &req, int cur_fd);
 

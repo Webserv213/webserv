@@ -24,8 +24,12 @@ std::string& Response::getBody(void)
     return(body_);
 }
 
-void    Response::addBody(std::string& body)
+void    Response::addBody(const std::string& body)
 {
-    for (size_t i = 0; i < body.size(); i++)
-        body_.push_back(body[i]);
+    body_.append(body);
+}
+
+void    Response::setBody(const std::string& body)
+{
+    body_ = body;
 }
