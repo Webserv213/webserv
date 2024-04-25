@@ -114,7 +114,7 @@ public:
     int getCgiStatus(void);
     std::string getCgiPath(void);
     int getPipeMode(void);
-    std::string getSendCgiBody(void);
+    std::string& getSendCgiBody(void);
     int getWriteBodyIndex(void);
     size_t getChunkedBeginIndex();
 

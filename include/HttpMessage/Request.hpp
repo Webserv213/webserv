@@ -17,7 +17,7 @@ private:
 public:
     RequestLine& getRequestLine();
     ReqHeaders& getHeaders();
-    std::string getBody();
+    std::string& getBody();
     void methodGetHandler(Server& server);
     void addBody(const std::string& body);
     void setBody(const std::string& body);

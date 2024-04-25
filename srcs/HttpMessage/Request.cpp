@@ -20,7 +20,7 @@ ReqHeaders& Request::getHeaders()
     return (headers_);
 }
 
-std::string Request::getBody(void)
+std::string& Request::getBody(void)
 {
     return (body_);
 }

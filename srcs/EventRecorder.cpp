@@ -311,7 +311,7 @@ int EventRecorder::getPipeMode(void)
     return (pipe_mode_);
 }
 
-std::string EventRecorder::getSendCgiBody(void)
+std::string& EventRecorder::getSendCgiBody(void)
 {
     return (send_cgi_body_);
 }

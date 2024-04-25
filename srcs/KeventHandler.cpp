@@ -858,7 +858,7 @@ void    KeventHandler::sendResponse(unsigned int curr_event_fd, long write_able_
         long long time_diff = milliseconds - previous_time;
         previous_time = milliseconds;
         if (fd_manager_[curr_event_fd].getRequest().getRequestLine().getMethod() == "POST")
-            std::cout << "테스터에 1억개 전달 완료: " << time_diff << std::endl;
+            std::cout << "테스터에 1억개 전달 완료: " << time_diff << "\n\n";
 
         EventRecorder n;
         fd_manager_[curr_event_fd] = n;
@@ -1035,10 +1035,9 @@ int KeventHandler::readChunkedData(struct kevent* curr_event)
         long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
         long long time_diff = milliseconds - previous_time;
         previous_time = milliseconds;
-        std::cout << "테스터가 보낸 chunked body 다 읽음 : " << time_diff << std::endl;
-
-        std::cout << "\nchunked body size : " << fd_manager_[curr_event->ident].getRequest().getBody().size() << "\n";
-        std::cout << "\nchunked body end\n";
+        std::cout << "테스터가 보낸 chunked body 다 읽음 : " << time_diff << "\n";
+        std::cout << "chunked body size : " << fd_manager_[curr_event->ident].getRequest().getBody().size() << "\n";
+        std::cout << "chunked body end\n";
 
         fd_manager_[curr_event->ident].setFdContentIndex(0);
 
