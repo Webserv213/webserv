@@ -92,6 +92,8 @@ void    checkRequest(Request &req)
 void    KeventHandler::disconnectClient(int client_fd)
 {
     std::cout << "client disconnected: " << client_fd << std::endl;
+    
+    changeEvents(change_list_, client_fd, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
     close(client_fd);
     fd_manager_.erase(client_fd);
     fd_content_.erase(client_fd);
@@ -172,7 +174,8 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
             EventRecorder st;
             fd_manager_[client_socket] = st;
             changeEvents(change_list_, client_socket, EVFILT_READ, EV_ADD, 0, 0, &fd_manager_[client_socket]);
-            changeEvents(change_list_, client_socket, EVFILT_WRITE, EV_ADD, 0, 0, &fd_manager_[client_socket]);
+            changeEvents(change_list_, client_socket, EVFILT_TIMER, EV_ADD, 0, 60000, &fd_manager_[client_socket]);
+            // changeEvents(change_list_, client_socket, EVFILT_WRITE, EV_ADD, 0, 0, &fd_manager_[client_socket]);
             fd_content_[client_socket];
             result = true;
         }
@@ -802,7 +805,9 @@ void KeventHandler::createResponse(unsigned int cur_fd)
     res_tmp += ("Date: " + fd_manager_[parent_fd].getResponse().getHeaders().getDate() + "\r\n");
     res_tmp += ("Content-Type: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentType() + "\r\n");
     res_tmp += ("Content-Length: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentLength() + "\r\n");
-    res_tmp += ("Connection: " + fd_manager_[parent_fd].getResponse().getHeaders().getConnection() + "\r\n");
+    // res_tmp += ("Connection: " + fd_manager_[parent_fd].getResponse().getHeaders().getConnection() + "\r\n");
+    std::string a = "keep-alive";
+    res_tmp += ("Connection: " + a + "\r\n");
     res_tmp += ("Keep-Alive: " + fd_manager_[parent_fd].getResponse().getHeaders().getKeepAlive() + "\r\n");
     res_tmp += "\r\n" + fd_manager_[parent_fd].getResponse().getBody();
     fd_content_[parent_fd] = res_tmp;
@@ -1233,6 +1238,8 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event)
     // std::cout << "cur_fd: " << curr_event->ident << "\n";
     // std::cout << "flag: " << fd_manager_[curr_event->ident].getCgiStatus() << "\n";
 
+    if (curr_event->filter == EVFILT_TIMER)
+        return (CLOSE_CONNECTION);
     // std::cout << "occur event! 1\n";
     if (fd_manager_.find(curr_event->ident) == fd_manager_.end())
         return (IDLE);
@@ -1427,18 +1434,19 @@ void KeventHandler::runServer(void)
     int             new_events;
     int             event_type;
     struct kevent*  curr_event;
-    // char            buf[BUFFER_SIZE];
-    // int             n;
+
+    struct timespec timeout;
+    timeout.tv_sec = 60;
+    timeout.tv_nsec = 0;
 
     initKqueue();
     while (1)
     {
-        new_events = kevent(kq_, &change_list_[0], change_list_.size(), event_list_, EVENT_LIST_SIZE, NULL);
+        new_events = kevent(kq_, &change_list_[0], change_list_.size(), event_list_, EVENT_LIST_SIZE, &timeout);
         if (new_events == -1)
             throw(std::runtime_error("kevent() error\n"));
 
         change_list_.clear();
-
         for (int i = 0; i < new_events; ++i)
         {
             curr_event = &event_list_[i];
