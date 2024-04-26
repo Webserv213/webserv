@@ -870,6 +870,8 @@ void    KeventHandler::sendResponse(unsigned int curr_event_fd, long write_able_
         fd_content_[curr_event_fd].clear();
         changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_ADD, 0, 0, &fd_manager_[curr_event_fd]);
+        // changeEvents(change_list_, curr_event_fd, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
+        changeEvents(change_list_, curr_event_fd, EVFILT_TIMER, EV_ADD, 0, 60000, &fd_manager_[curr_event_fd]);
         return ;
     }
 
@@ -879,7 +881,8 @@ void    KeventHandler::sendResponse(unsigned int curr_event_fd, long write_able_
     {
         std::cerr << "client write error!" << std::endl;
         disconnectClient(curr_event_fd);
-        fd_manager_[curr_event_fd].setFdError(1);
+        return ;
+        // fd_manager_[curr_event_fd].setFdError(1);
     }
     fd_manager_[curr_event_fd].sumWriteBodyIndex(cur_write_size);
 }
@@ -1238,6 +1241,28 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event)
     // std::cout << "cur_fd: " << curr_event->ident << "\n";
     // std::cout << "flag: " << fd_manager_[curr_event->ident].getCgiStatus() << "\n";
 
+    if (curr_event->flags & EV_ERROR)
+    {
+        std::cout << "occur event! ev_error\n";
+        return (IDLE);
+    }
+    if (curr_event->filter == EVFILT_WRITE && fd_manager_[curr_event->ident].getCgiStatus() == WRITE_CGI) 
+    {
+        // std::map<int, std::string >::iterator it = fd_content_.find(curr_event->ident);
+        // if (it != fd_content_.end())
+        std::map<int, EventRecorder >::iterator it = fd_manager_.find(curr_event->ident);
+        if (it != fd_manager_.end())
+        {
+            return (WRITE_CGI);
+        }
+        else
+        {
+            std::cout << "없는 FD가 WRITE_CGI 발생함\n";
+            return (ERROR);
+        }
+    }
+
+
     if (curr_event->filter == EVFILT_TIMER)
         return (CLOSE_CONNECTION);
     // std::cout << "occur event! 1\n";
@@ -1250,12 +1275,7 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event)
         return (WRITE_CGI);
     // std::cout << "occur event! 3\n";
 
-    if (curr_event->flags & EV_ERROR)
-    {
-        std::cout << "occur event! ev_error\n";
-        return (ERROR);
-    }
-    else if (curr_event->filter == EVFILT_READ || fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
+    if (curr_event->filter == EVFILT_READ || fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
     {
         // std::cout << "read fd flag\n";
         if (isSocket(curr_event))
@@ -1435,16 +1455,28 @@ void KeventHandler::runServer(void)
     int             event_type;
     struct kevent*  curr_event;
 
-    struct timespec timeout;
-    timeout.tv_sec = 60;
-    timeout.tv_nsec = 0;
+    // struct timespec timeout;
+    // timeout.tv_sec = 60;
+    // timeout.tv_nsec = 0;
 
     initKqueue();
     while (1)
     {
-        new_events = kevent(kq_, &change_list_[0], change_list_.size(), event_list_, EVENT_LIST_SIZE, &timeout);
+        new_events = kevent(kq_, &change_list_[0], change_list_.size(), event_list_, EVENT_LIST_SIZE, NULL);
         if (new_events == -1)
             throw(std::runtime_error("kevent() error\n"));
+
+        // std::cout << "event count: " << new_events << "\n";
+        // for (int i = 0; i < new_events; ++i) {
+        //     if (event_list_[i].filter == EVFILT_WRITE)
+        //         std::cout << "[" << event_list_[i].ident << "] : EVFILT_WRITE\n";
+        //     else if (event_list_[i].filter == EVFILT_READ)
+        //         std::cout << "[" << event_list_[i].ident << "] : EVFILT_READ\n";
+        //     else if (event_list_[i].filter == EVFILT_TIMER)
+        //         std::cout << "[" << event_list_[i].ident << "] : EVFILT_TIMER\n";
+        //     else
+        //         std::cout << "[" << event_list_[i].ident << "] : WHAT?\n";
+        // }
 
         change_list_.clear();
         for (int i = 0; i < new_events; ++i)
@@ -1505,5 +1537,6 @@ void KeventHandler::runServer(void)
                 }
             }
         }
+        // std::cout << "\n";
     }
 }

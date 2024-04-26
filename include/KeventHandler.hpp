@@ -16,7 +16,7 @@
 # include "Http.hpp"
 # include "Utils.hpp"
 
-# define EVENT_LIST_SIZE 100
+# define EVENT_LIST_SIZE 500
 # define CRLF_LENGTH 2
 
 enum EventType
