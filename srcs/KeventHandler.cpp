@@ -1,8 +1,4 @@
 #include "KeventHandler.hpp"
-#include <dirent.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <cstdio>
 
 long long previous_time;
 
@@ -84,10 +80,50 @@ void KeventHandler::setMimeType()
     mime_type_["mng"] = "video/x-mng";
 }
 
-void    checkRequest(Request &req)
+void KeventHandler::setServerSocket(struct sockaddr_in *server_addr, Server server)
 {
-    std::cout << "Host: " << req.getHeaders().getHost() << "\n";
-    std::cout << "Listen socket: " << req.getHeaders().getListenPort() << "\n";
+    memset(&(*server_addr), 0, sizeof(*server_addr));
+    (*server_addr).sin_family = AF_INET;
+    (*server_addr).sin_addr.s_addr = htonl(INADDR_ANY);
+    (*server_addr).sin_port = htons(server.getListenPort());
+}
+
+void KeventHandler::initKqueue()
+{
+    kq_ = kqueue();
+    if (kq_ == -1)
+        throw(std::runtime_error("kqueue() error\n"));
+}
+
+void KeventHandler::changeEvents(std::vector<struct kevent>& change_list, uintptr_t ident, int16_t filter,
+                                uint16_t flags, uint32_t fflags, intptr_t data, void *udata)
+{
+    struct kevent temp_event;
+
+    EV_SET(&temp_event, ident, filter, flags, fflags, data, udata);
+    change_list.push_back(temp_event);
+}
+
+void KeventHandler::setReadFileEvent(int curr_event_fd, int file_fd)
+{
+    EventRecorder event_recorder(curr_event_fd);
+    event_recorder.setEventReadFile(1);
+    fd_content_[file_fd];
+    
+    fd_manager_[file_fd] = event_recorder;
+    fd_manager_[curr_event_fd].setEventWriteRes(0);
+    
+    changeEvents(change_list_, file_fd, EVFILT_READ, EV_ADD, 0, 0, &fd_manager_[file_fd]);
+}
+
+bool KeventHandler::isSocket(struct kevent* curr_event)
+{
+     for(size_t i = 0; i < server_sockets_.size(); i++)
+    {
+        if (curr_event->ident == server_sockets_[i])
+            return (true);
+    }
+    return (false);
 }
 
 void    KeventHandler::disconnectClient(int client_fd)
@@ -98,23 +134,6 @@ void    KeventHandler::disconnectClient(int client_fd)
     close(client_fd);
     fd_manager_.erase(client_fd);
     fd_content_.erase(client_fd);
-}
-
-void KeventHandler::changeEvents(std::vector<struct kevent>& change_list, uintptr_t ident, int16_t filter,
-        uint16_t flags, uint32_t fflags, intptr_t data, void *udata)
-{
-    struct kevent temp_event;
-
-    EV_SET(&temp_event, ident, filter, flags, fflags, data, udata);
-    change_list.push_back(temp_event);
-}
-
-void KeventHandler::setServerSocket(struct sockaddr_in *server_addr, Server server)
-{
-    memset(&(*server_addr), 0, sizeof(*server_addr));
-    (*server_addr).sin_family = AF_INET;
-    (*server_addr).sin_addr.s_addr = htonl(INADDR_ANY);
-    (*server_addr).sin_port = htons(server.getListenPort());
 }
 
 void KeventHandler::openListenSocket()
@@ -130,8 +149,10 @@ void KeventHandler::openListenSocket()
         setServerSocket(&server_addr, server[i]);
 
         listen_socket_fd = socket(PF_INET, SOCK_STREAM, 0);
+
         EventRecorder st;
         fd_manager_[listen_socket_fd] = st;
+
         if (listen_socket_fd == -1)
             throw(std::runtime_error("socket() error\n"));
 
@@ -140,22 +161,85 @@ void KeventHandler::openListenSocket()
 
         if (listen(listen_socket_fd, 500) == -1)
             throw(std::runtime_error("listen() error\n"));
+
         fcntl(listen_socket_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
 
         server_sockets_.push_back(listen_socket_fd);
         changeEvents(change_list_, listen_socket_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
 
         // using debug
-        std::cout << "listen_socket_fd : " << listen_socket_fd << ", webserv on" << std::endl;
+        std::cout << "Listen Socket FD : " << listen_socket_fd << " | WEBSERV ON" << std::endl;
     }
 }
 
-void KeventHandler::initKqueue()
+
+
+void KeventHandler::runServer(void)
 {
-    kq_ = kqueue();
-    if (kq_ == -1)
-        throw(std::runtime_error("kqueue() error\n"));
+    int             new_events;
+    int             event_type;
+    struct kevent*  curr_event;
+
+    initKqueue();
+
+    while (1)
+    {
+        new_events = kevent(kq_, &change_list_[0], change_list_.size(), event_list_, EVENT_LIST_SIZE, NULL);
+        if (new_events == -1)
+            throw(std::runtime_error("kevent() error\n"));
+
+        change_list_.clear();
+
+        for (int i = 0; i < new_events; ++i)
+        {
+            curr_event = &event_list_[i];
+            event_type = getEventFlag(curr_event);
+
+            switch(event_type)
+            {
+                case WRITE_CGI:
+                    executeCgi(curr_event);
+                    break ;
+
+                case ERROR :
+                    socketError(curr_event);
+                    break ;
+
+                case IS_SERVER_SOCKET :
+                    createClientSocket(curr_event);
+                    break ;
+
+                case READ_ERROR :
+                    clientReadError(curr_event);
+                    break ;
+
+                case READ_FINISH_REQUEST :
+                    executeMethod(transferFd(curr_event->ident));
+                    break ;
+
+                case READ_FINISH_FILE :
+                    createResponse(curr_event->ident);
+                    break ;
+
+                case SEND_RESPONSE :
+                    sendResponse(curr_event->ident, curr_event->data);
+                    break ;
+
+                case CLOSE_CONNECTION :
+                    disconnectClient(curr_event->ident);
+                    break ;
+
+                case IDLE :
+                    break ;
+
+                default :
+                    throw(std::runtime_error("event exception error\n"));
+            }
+        }
+    }
 }
+
+
 
 bool    KeventHandler::createClientSocket(struct kevent* curr_event)
 {
@@ -168,15 +252,13 @@ bool    KeventHandler::createClientSocket(struct kevent* curr_event)
             int client_socket = accept(server_sockets_[i], NULL, NULL);
             if (client_socket < 0)
                 throw(std::runtime_error("accept() error\n"));
-            std::cout << "accept new client: " << client_socket << std::endl;
             fcntl(client_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+            std::cout << "accept new client: " << client_socket << std::endl;
 
-            /* add event for client socket - add read & write event */
             EventRecorder st;
             fd_manager_[client_socket] = st;
             changeEvents(change_list_, client_socket, EVFILT_READ, EV_ADD, 0, 0, &fd_manager_[client_socket]);
             changeEvents(change_list_, client_socket, EVFILT_TIMER, EV_ADD, 0, 60000, &fd_manager_[client_socket]);
-            // changeEvents(change_list_, client_socket, EVFILT_WRITE, EV_ADD, 0, 0, &fd_manager_[client_socket]);
             fd_content_[client_socket];
             result = true;
         }
@@ -241,7 +323,7 @@ int KeventHandler::getLocationIndex(Request req, Server &server, size_t *res_sam
         same_path_cnt = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
         if (checkCgi(req, server.getLocation()[i], cgi_file_extension))   // fd_manager의 리퀘스트의 메소드 벡터 확인
         {
-            *res_same_path_cnt = 1;     // 임시적인거고
+            *res_same_path_cnt = 1;
             return (i);
         }
 
@@ -412,15 +494,7 @@ std::string KeventHandler::createFilePath(Server &server, Request &req, int loc_
     return (file_path);
 }
 
-void KeventHandler::setReadFileEvent(int curr_event_fd, int file_fd)
-{
-    fd_content_[file_fd];
-    EventRecorder event_recorder(curr_event_fd);
-    event_recorder.setEventReadFile(1);
-    fd_manager_[file_fd] = event_recorder;        // 파일에 대한 상태값 표시
-    fd_manager_[curr_event_fd].setEventWriteRes(-1);
-    changeEvents(change_list_, file_fd, EVFILT_READ, EV_ADD, 0, 0, &fd_manager_[file_fd]);
-}
+
 
 // ========================================= method_error =========================================
 
@@ -482,35 +556,35 @@ void KeventHandler::forbidden403(int curr_event_fd)
 
 // ========================================= post_utils =========================================
 
-void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
-{
-    int fd;
+// void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
+// {
+//     int fd;
 
-    // std::cout << "file_path :" << file_path << std::endl;
-    fd = open(file_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0)
-        std::runtime_error("file open [post]");
+//     // std::cout << "file_path :" << file_path << std::endl;
+//     fd = open(file_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
+//     if (fd < 0)
+//         std::runtime_error("file open [post]");
 
-    // std::cout << "file fd: " << fd << "\n";
+//     // std::cout << "file fd: " << fd << "\n";
 
-    fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
-    fd_content_[fd] = fd_manager_[curr_event_fd].getRequest().getBody();    // fd_content[fd]에 request 받아온 body 넣어주기
+//     fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+//     fd_content_[fd] = fd_manager_[curr_event_fd].getRequest().getBody();    // fd_content[fd]에 request 받아온 body 넣어주기
 
-    // std::cout << "create file post buf: " << charVectorToString(fd_content_[fd]) << "\n";
+//     // std::cout << "create file post buf: " << charVectorToString(fd_content_[fd]) << "\n";
 
-    // setWriteFileEvent -> 따로 빼보기
-    EventRecorder event_recorder(curr_event_fd);
-    event_recorder.setEventWriteFile(1);
-    fd_manager_[fd] = event_recorder;
-    if (fd_manager_[curr_event_fd].getCgiStatus() == DONE_CGI)
-    {
-        fd_manager_[fd].getRequest().addBody(fd_content_[fd]);
-    }
-    changeEvents(change_list_, fd, EVFILT_WRITE, EV_ADD, 0, 0, &fd_manager_[fd]);
-    fd_manager_[curr_event_fd].setEventWriteRes(-1);
-    if (fd_manager_[curr_event_fd].getCgiStatus() != DONE_CGI)  // cgi아닌 경우만 delete 안함
-        changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-}
+//     // setWriteFileEvent -> 따로 빼보기
+//     EventRecorder event_recorder(curr_event_fd);
+//     event_recorder.setEventWriteFile(1);
+//     fd_manager_[fd] = event_recorder;
+//     if (fd_manager_[curr_event_fd].getCgiStatus() == DONE_CGI)
+//     {
+//         fd_manager_[fd].getRequest().addBody(fd_content_[fd]);
+//     }
+//     changeEvents(change_list_, fd, EVFILT_WRITE, EV_ADD, 0, 0, &fd_manager_[fd]);
+//     fd_manager_[curr_event_fd].setEventWriteRes(0);
+//     if (fd_manager_[curr_event_fd].getCgiStatus() != DONE_CGI)  // cgi아닌 경우만 delete 안함
+//         changeEvents(change_list_, curr_event_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+// }
 
 // ========================================= post_method =========================================
 
@@ -936,30 +1010,30 @@ void KeventHandler::createResponse(unsigned int cur_fd)
     changeEvents(change_list_, parent_fd, EVFILT_WRITE, EV_ADD, 0, 0, &fd_manager_[parent_fd]);
 }
 
-void    KeventHandler::createFile(struct kevent* curr_event)
-{
-    int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
+// void    KeventHandler::createFile(struct kevent* curr_event)
+// {
+//     int parent_fd = fd_manager_[curr_event->ident].getParentClientFd();
 
-    int n = write(curr_event->ident, &(fd_manager_[parent_fd].getRequest().getBody().c_str()[fd_manager_[curr_event->ident].getWriteBodyIndex()]), fd_manager_[parent_fd].getRequest().getBody().size());
-    if (n < 0)
-    {
-        std::cerr << "file write error!" << std::endl;
-        // disconnectClient(curr_event->ident);
-        fd_manager_[curr_event->ident].setFdError(1);
-    }
+//     int n = write(curr_event->ident, &(fd_manager_[parent_fd].getRequest().getBody().c_str()[fd_manager_[curr_event->ident].getWriteBodyIndex()]), fd_manager_[parent_fd].getRequest().getBody().size());
+//     if (n < 0)
+//     {
+//         std::cerr << "file write error!" << std::endl;
+//         // disconnectClient(curr_event->ident);
+//         fd_manager_[curr_event->ident].setFdError(1);
+//     }
 
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
-    long long time_diff = milliseconds - previous_time;
-    previous_time = milliseconds;
-    std::cout << "파일에 1억개 다씀 : " << time_diff << std::endl;
+//     struct timeval tv;
+//     gettimeofday(&tv, NULL);
+//     long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+//     long long time_diff = milliseconds - previous_time;
+//     previous_time = milliseconds;
+//     std::cout << "파일에 1억개 다씀 : " << time_diff << std::endl;
 
-    fd_manager_[parent_fd].getResponse().getStatusLine().setStatusCode("200");
-    fd_manager_[parent_fd].getResponse().getStatusLine().setStatusText("OK");
-    createResponse(curr_event->ident);
-    return ;
-}
+//     fd_manager_[parent_fd].getResponse().getStatusLine().setStatusCode("200");
+//     fd_manager_[parent_fd].getResponse().getStatusLine().setStatusText("OK");
+//     createResponse(curr_event->ident);
+//     return ;
+// }
 
 
 // void    KeventHandler::sendResponse(struct kevent* curr_event)
@@ -998,7 +1072,6 @@ void    KeventHandler::sendResponse(unsigned int curr_event_fd, long write_able_
         std::cerr << "client write error!" << std::endl;
         disconnectClient(curr_event_fd);
         return ;
-        // fd_manager_[curr_event_fd].setFdError(1);
     }
     fd_manager_[curr_event_fd].sumWriteBodyIndex(cur_write_size);
 }
@@ -1118,10 +1191,10 @@ int KeventHandler::readContentBody(struct kevent* curr_event)
 
             read_content_body_res = READ_FINISH_REQUEST;
         }
-        else if (fd_content_[curr_event->ident].size() < total_content_body_length)
-        {
-            read_content_body_res = IDLE;
-        }
+        // else if (fd_content_[curr_event->ident].size() < total_content_body_length)
+        // {
+        //     read_content_body_res = IDLE;
+        // }
     }
 
     if (read_content_body_res == READ_FINISH_REQUEST)
@@ -1217,7 +1290,7 @@ int KeventHandler::readChunkedBody(struct kevent* curr_event)
         if (read_chunked_body_res == READ_FINISH_REQUEST)
             break ;
         // fd_content_에 읽을 문자의 수가 chunked length 보다 작은 상황에서 crlf를 못만났을 때 탈출하는 조건
-        // 예시) fd_content_에 400680의 문자가 있고 총 읽은 문자의 개수가 395000개 이면서 chunked length 값이 32768일 때 무한루프를 도는데 이를 탈출하기 위함
+        // 예시) fd_content_에 40000의 문자가 있고 총 읽은 문자의 개수가 35000개 이면서 chunked length 값이 30000일 때 무한루프를 도는데 이를 탈출하기 위함
         if (fd_manager_[curr_event->ident].getFdContentIndex() == fd_content_[curr_event->ident].size())
             break ;
     }
@@ -1293,8 +1366,8 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
             return (CLOSE_CONNECTION);
         if (n < 0)
             return (READ_ERROR);
-        addContent(curr_event, buf, n);
-        if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
+        fd_content_[curr_event->ident].append(buf, n);
+        if (fd_manager_[curr_event->ident].getEventReadFile() == 0)
             return (addSegmentReqAndReadMode(curr_event));
         else
         {
@@ -1329,15 +1402,7 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
     return (IDLE);
 }
 
-bool KeventHandler::isSocket(struct kevent* curr_event)
-{
-     for(size_t i = 0; i < server_sockets_.size(); i++)
-    {
-        if (curr_event->ident == server_sockets_[i])
-            return (true);
-    }
-    return (false);
-}
+
 
 int  KeventHandler::writeFdFlag(struct kevent* curr_event)
 {
@@ -1348,8 +1413,6 @@ int  KeventHandler::writeFdFlag(struct kevent* curr_event)
         {
             return (SEND_RESPONSE);
         }
-        else if (fd_manager_[curr_event->ident].getEventWriteFile() == 1)
-            return (EDIT_FILE);
         else
             return (IDLE);
     }
@@ -1358,58 +1421,30 @@ int  KeventHandler::writeFdFlag(struct kevent* curr_event)
 
 int  KeventHandler::getEventFlag(struct kevent* curr_event)
 {
-    // std::cout << "cur_fd: " << curr_event->ident << "\n";
-    // std::cout << "flag: " << fd_manager_[curr_event->ident].getCgiStatus() << "\n";
-
     if (curr_event->flags & EV_ERROR)
     {
-        std::cout << "occur event! ev_error\n";
+        std::cout << "EV_ERROR!\n";
         return (IDLE);
     }
-    if (curr_event->filter == EVFILT_WRITE && fd_manager_[curr_event->ident].getCgiStatus() == WRITE_CGI) 
-    {
-        // std::map<int, std::string >::iterator it = fd_content_.find(curr_event->ident);
-        // if (it != fd_content_.end())
-        std::map<int, EventRecorder >::iterator it = fd_manager_.find(curr_event->ident);
-        if (it != fd_manager_.end())
-        {
-            return (WRITE_CGI);
-        }
-        else
-        {
-            std::cout << "없는 FD가 WRITE_CGI 발생함\n";
-            return (ERROR);
-        }
-    }
-
-
     if (curr_event->filter == EVFILT_TIMER)
         return (CLOSE_CONNECTION);
-    // std::cout << "occur event! 1\n";
-    if (fd_manager_.find(curr_event->ident) == fd_manager_.end())
-        return (IDLE);
-    // std::cout << "occur event! 2\n";
-
-    // cgi
-    if (fd_manager_[curr_event->ident].getCgiStatus() == WRITE_CGI)
-        return (WRITE_CGI);
-    // std::cout << "occur event! 3\n";
-
-    if (curr_event->filter == EVFILT_READ || fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
+    if (curr_event->filter == EVFILT_WRITE && fd_manager_[curr_event->ident].getCgiStatus() == WRITE_CGI) 
     {
-        // std::cout << "read fd flag\n";
+        std::map<int, EventRecorder >::iterator it = fd_manager_.find(curr_event->ident);
+        if (it != fd_manager_.end())
+            return (WRITE_CGI);
+        else
+            return (ERROR);
+    }
+    if (curr_event->filter == EVFILT_READ)
+    {
         if (isSocket(curr_event))
             return (IS_SERVER_SOCKET);
         return (readFdFlag(curr_event));
     }
     else if (curr_event->filter == EVFILT_WRITE)
-    {
-        // std::cout << "write fd flag\n";
         return (writeFdFlag(curr_event));
-    }
-    
-    // std::cout << "occur event! 4\n";
-    return (-1);
+    return (IDLE);
 }
 
 void KeventHandler::socketError(struct kevent*  curr_event)
@@ -1431,13 +1466,6 @@ void KeventHandler::clientReadError(struct kevent* curr_event)
 {
     std::cerr << "client read error!" <<std::endl;
     disconnectClient(curr_event->ident);
-}
-
-void KeventHandler::addContent(struct kevent* curr_event, const char buf[], int n)
-{
-    // std::cout << "add content\n";
-    // fd_content_[curr_event->ident].insert(fd_content_[curr_event->ident].end(), buf, buf + n);
-    fd_content_[curr_event->ident].append(buf, n);
 }
 
 void KeventHandler::closePipes(int parent_fd)
@@ -1484,19 +1512,19 @@ char** KeventHandler::createEnv(int parent_fd)
     return (env);
 }
 
-void KeventHandler::createPipe(int parent_fd)
-{
-    int fd[2];
+// void KeventHandler::createPipe(int parent_fd)
+// {
+//     int fd[2];
 
-    pipe(fd);
-    EventRecorder pipe_event_recorder(parent_fd);
-    fd_manager_[fd[0]] = pipe_event_recorder;
-    fd_manager_[fd[1]] = pipe_event_recorder;
+//     pipe(fd);
+//     EventRecorder pipe_event_recorder(parent_fd);
+//     fd_manager_[fd[0]] = pipe_event_recorder;
+//     fd_manager_[fd[1]] = pipe_event_recorder;
 
-    fd_manager_[parent_fd].setReceivePipe(0, fd[0]);
-    fd_manager_[parent_fd].setReceivePipe(1, fd[1]);
-    fd_manager_[fd[0]].setCgiStatus(READ_CGI);
-}
+//     fd_manager_[parent_fd].setReceivePipe(0, fd[0]);
+//     fd_manager_[parent_fd].setReceivePipe(1, fd[1]);
+//     fd_manager_[fd[0]].setCgiStatus(READ_CGI);
+// }
 
 // void writeData(int fd, const std::string& data) {
 //     const char* buffer = data.c_str(); // 문자열 데이터를 버퍼로 변환
@@ -1549,114 +1577,23 @@ void KeventHandler::executeCgi(struct kevent* curr_event)
     }
     if (n < 0)
         throw(std::runtime_error("cgi write error\n"));
+
     fd_manager_[curr_event->ident].sumWriteBodyIndex(cur_write_size);
 }
 
 int KeventHandler::transferFd(uintptr_t fd)
 {
-    // 파이프 파일이면 부모 fd 리턴
+    // 파이프 FD면 부모 FD 리턴
     if (fd_manager_[fd].getCgiStatus() == DONE_CGI)
     {
-        int parent_fd;
+        int parent_fd = fd_manager_[fd].getParentClientFd();
 
-        parent_fd = fd_manager_[fd].getParentClientFd();
         fd_manager_[parent_fd].setCgiStatus(DONE_CGI);
         fd_manager_.erase(fd);
         fd_content_.erase(fd);
+
         return (parent_fd);
     }
-    // 아니면 자기 자신 리턴
+    // 아니면 원래 FD 리턴
     return (fd);
-}
-
-void KeventHandler::runServer(void)
-{
-    int             new_events;
-    int             event_type;
-    struct kevent*  curr_event;
-
-    // struct timespec timeout;
-    // timeout.tv_sec = 60;
-    // timeout.tv_nsec = 0;
-
-    initKqueue();
-    while (1)
-    {
-        new_events = kevent(kq_, &change_list_[0], change_list_.size(), event_list_, EVENT_LIST_SIZE, NULL);
-        if (new_events == -1)
-            throw(std::runtime_error("kevent() error\n"));
-
-        // std::cout << "event count: " << new_events << "\n";
-        // for (int i = 0; i < new_events; ++i) {
-        //     if (event_list_[i].filter == EVFILT_WRITE)
-        //         std::cout << "[" << event_list_[i].ident << "] : EVFILT_WRITE\n";
-        //     else if (event_list_[i].filter == EVFILT_READ)
-        //         std::cout << "[" << event_list_[i].ident << "] : EVFILT_READ\n";
-        //     else if (event_list_[i].filter == EVFILT_TIMER)
-        //         std::cout << "[" << event_list_[i].ident << "] : EVFILT_TIMER\n";
-        //     else
-        //         std::cout << "[" << event_list_[i].ident << "] : WHAT?\n";
-        // }
-
-        change_list_.clear();
-        for (int i = 0; i < new_events; ++i)
-        {
-            curr_event = &event_list_[i];
-            // event_type = getEventFlag(curr_event, buf, &n);
-            event_type = getEventFlag(curr_event);
-
-            switch(event_type)
-            {
-                case WRITE_CGI:
-                    executeCgi(curr_event);
-                    break ;
-
-                case ERROR :
-                    socketError(curr_event);
-                    break ;
-
-                case IS_SERVER_SOCKET :
-                    createClientSocket(curr_event);
-                    break ;
-
-                case READ_ERROR :
-                    clientReadError(curr_event);
-                    break ;
-
-                case READ_FINISH_REQUEST :
-                    executeMethod(transferFd(curr_event->ident));
-                    break ;
-
-                case READ_FINISH_FILE :
-                    createResponse(curr_event->ident);
-                    break ;
-
-                // case READ_CONTINUE :
-                //     addContent(curr_event, buf, n);
-                //     break ;
-
-                case SEND_RESPONSE :
-                    sendResponse(curr_event->ident, curr_event->data);
-                    break ;
-
-                case EDIT_FILE :
-                    createFile(curr_event);
-                    break ;
-
-                case CLOSE_CONNECTION :
-                    disconnectClient(curr_event->ident);
-                    break ;
-
-                case IDLE :
-                    // std::cout << "IDLE" << std::endl;
-                    break ;
-
-                default :
-                {
-                    throw(std::runtime_error("event exception error\n"));
-                }
-            }
-        }
-        // std::cout << "\n";
-    }
 }

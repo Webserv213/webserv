@@ -1,9 +1,4 @@
 # include "Utils.hpp"
-# include <fstream>
-# include <iostream>
-# include <string>
-# include <sstream>
-# include <sys/stat.h>
 
 std::string getFileContents(std::string input_file_name)
 {
@@ -65,28 +60,15 @@ void getlineSkipDelemeter(std::istringstream& stream_file_contents, std::string&
     }
 }
 
-std::string mySubstr(std::string::iterator start, std::string::iterator end)
-{
-    std::string result_str;
-
-    for (std::string::iterator it = start; it != end; ++it)
-    {
-        result_str += *it;
-    }
-
-    return result_str;
-}
-
 int isFileOrDirectory(const char* path)
 {
-    // std::cout << "path<" << path << ">path" << std::endl;
     struct stat fileInfo;
-    // std::cout << "path: " << path << "\n";
+
     if (stat(path, &fileInfo) != 0) {
         // stat 호출이 실패한 경우
         return (FILE_NOT_FOUND);
     }
-
+    
     if (S_ISREG(fileInfo.st_mode)) {
         // 일반 파일인 경우
         return IS_FILE;
@@ -100,6 +82,7 @@ int isFileOrDirectory(const char* path)
 int hexToDecimal(const char buf[], int size)
 {
     int result = 0; // 결과 값을 저장할 변수
+
     for (int i = 0; i < size; ++i) {
         result *= 16; // 16진수이므로, 이전 결과에 16을 곱함
 
@@ -115,27 +98,4 @@ int hexToDecimal(const char buf[], int size)
         }
     }
     return result;
-}
-
-void reqPrint(char *buf, int n)
-{
-    int i = 0;
-    while (i < n)
-    {
-        if (buf[i] == '\r')
-            write (1, "\\r", 2);
-        else
-            write (1, &buf[i], 1);
-        i++;
-    }
-}
-
-bool existMethod(std::string method, std::vector<std::string> accessMethod)
-{
-    for(size_t i = 0; i < accessMethod.size(); i++)
-    {
-        if (accessMethod[i] == method)
-            return (true);
-    }
-    return (false);
 }

@@ -1,10 +1,9 @@
 #ifndef LOCATION_HPP
 # define LOCATION_HPP
 
-# include <iostream>
-# include <vector>
+# include <string>
 # include <map>
-# include "Server.hpp"
+# include <vector>
 
 class Server;
 
@@ -34,17 +33,15 @@ public:
     std::string                 getIndex();
     std::string                 getCgiPath();
 
-
     // setter
     void setRoot(std::string &root);
     void setIndex(std::string &index);
     void setAutoIndex(bool flag);
     void setClientMaxBodySize(long long client_max_body_size);
-    void setUrlPostfix(std::string  url_postfix);
-    void setAccessMethod(std::string  access_method);
+    void setUrlPostfix(std::string url_postfix);
+    void setAccessMethod(std::string access_method);
     void setErrorPage(std::string error_code, std::string &path);
     void setCgiPath(std::string path);
-
 };
 
 #endif

@@ -1,11 +1,9 @@
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
-# include <iostream>
-# include "RequestLine.hpp"
-# include "ReqHeaders.hpp"
+
 # include "Server.hpp"
-# include <fcntl.h>
-# include <unistd.h>
+# include "ReqHeaders.hpp"
+# include "RequestLine.hpp"
 
 class Request
 {
@@ -15,15 +13,19 @@ private:
     std::string body_;
 
 public:
+    Request();
+    ~Request();
+    
+    //getter
     RequestLine& getRequestLine();
     ReqHeaders& getHeaders();
     std::string& getBody();
-    void methodGetHandler(Server& server);
-    void addBody(const std::string& body);
+
+    //setter
     void setBody(const std::string& body);
-    void bodyClear();
-    Request();
-    ~Request();
+
+    //utils
+    void addBody(const std::string& body);
 };
 
 #endif

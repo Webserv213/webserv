@@ -1,11 +1,4 @@
 # include "Http.hpp"
-# include <fcntl.h>
-# include <iostream>
-# include <string>
-# include <unistd.h>
-# include <sstream>
-# include <stack>
-# include <fstream>
 
 Http::Http(void)
 {
@@ -36,8 +29,6 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
     getlineSkipDelemeter(stream_file_contents, buff, ' ');
     if (buff != "{")
         throw (std::runtime_error("Invalid config file contents [server's open bracket error]"));
-
-
 
     // 서버 블록 데이터 저장
     while (std::getline(stream_file_contents, buff, ' '))
@@ -95,7 +86,8 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
                 new_server.createDefaultLocation();
 
             Location new_location = new_server.setLocationBlock(stream_file_contents);
-            if (new_location.getUrlPostfix().size() == 0)    // '/'인 경우 [0]번째에 넣어주기
+            // '/'인 경우 [0]번째에 넣어주기
+            if (new_location.getUrlPostfix().size() == 0)
                 new_server.fixLocation(0, new_location);
             else
                 new_server.pushBackLocationBlock(new_location);
@@ -106,6 +98,7 @@ Server Http::setServerBlock(std::istringstream& stream_file_contents)
         new_server.createDefaultLocation();
 
     throw (std::runtime_error("Invalid config file contents [server's close bracket error]"));
+    
     return (new_server);
 }
 
@@ -150,7 +143,8 @@ void Http::setWebserv(int argc, char **argv)
     else
         file_contents = getFileContents(DEFAULT_CONF_FILE_PATH);
 
-    stream_file_contents.str(file_contents);    // string을 stream객체로 변환
+    // string을 stream객체로 변환
+    stream_file_contents.str(file_contents);    
     
     // setting http 블록 
     setHttpBlock(stream_file_contents);

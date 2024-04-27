@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Location.hpp"
 
 Server::Server(void)
 {
@@ -41,7 +42,6 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
         {
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
-            // std::cout << "buff: " << buff << "\n";
             new_location.setRoot(buff);
         }
         else if (buff == "autoindex")
@@ -63,7 +63,6 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
         {
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
-            // std::cout << "buff: " << buff << "\n";
             new_location.setIndex(buff);
         }
         else if (buff == "access_method")
@@ -97,7 +96,58 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
     return (new_location);
 }
 
+// getter
+std::string Server::getRoot(void)
+{
+    return (root_);
+}
+
+bool Server::getAutoIndex(void)
+{
+    return (autoindex_);
+}
+
+long long Server::getClientMaxBodySize(void)
+{
+    return (client_max_body_size_);
+}
+
+std::string Server::getErrorPage(std::string error_code)
+{
+    return (error_page_[error_code]);
+}
+
+unsigned short Server::getListenPort()
+{
+    return (listen_port_);
+}
+
+std::string Server::getServerName(void)
+{
+    return (server_name_);
+}
+
+Location Server::getLocationBlock(int idx)
+{
+    return (location_block_[idx]);
+}
+
+std::vector<Location> Server::getLocation(void)
+{
+    return (location_block_);
+}
+
+std::string Server::getIndex(void)
+{
+    return (index_);
+}
+
 // setter
+void Server::setLocation(Location &location)
+{
+    location_block_.push_back(location);
+}
+
 void Server::setRoot(std::string &root)
 {
     root_ = root;
@@ -133,79 +183,11 @@ void Server::setIndex(std::string &index)
     index_ = index;
 }
 
-// getter
-std::string Server::getRoot(void)
-{
-    return (root_);
-}
-
-bool Server::getAutoIndex(void)
-{
-    return (autoindex_);
-}
-
-long long Server::getClientMaxBodySize(void)
-{
-    return (client_max_body_size_);
-}
-
-std::string Server::getErrorPage(std::string error_code)
-{
-    return (error_page_[error_code]);
-}
-
-unsigned short Server::getListenPort()
-{
-    return (listen_port_);
-}
-
-std::string Server::getServerName(void)
-{
-    return (server_name_);
-}
-
-std::string Server::getIndex(void)
-{
-    return (index_);
-}
-
-Location Server::getLocationBlock(int idx)
-{
-    return (location_block_[idx]);
-}
-
-std::vector<Location> Server::getLocation(void)
-{
-    return (location_block_);
-}
-
-// util
-// int Server::findLocationBlock(std::string url)   // 도메인 뒤에 url로 넘겨주도록
-// {
-//     for(size_t i = 0; i < location_block_.size(); i++)
-//     {
-//         if (location_block_[i].getUrlPostfix() == url)
-//         {
-//             return (i);
-//         }
-//     }
-//     return (-1);
-// }
-
-void Server::setLocation(Location &location)
-{
-    location_block_.push_back(location);
-}
-
+//utils
 void Server::pushBackLocationBlock(Location &location)
 {
     location_block_.push_back(location);
 }
-
-// void Server::pushFrontLocationBlock(Location &location)
-// {
-//     location_block_.push_back(location);
-// }
 
 void Server::fixLocation(int idx, Location &location)
 {

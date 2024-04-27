@@ -11,6 +11,23 @@ RequestLine::~RequestLine(void)
 
 }
 
+//getter
+std::string&    RequestLine::getMethod(void)
+{
+    return (method_);
+}
+
+std::vector<std::string>    RequestLine::getRequestTarget(void)
+{
+    return (request_target_);
+}
+
+std::string&    RequestLine::getVersion(void)
+{
+    return (version_);
+}
+
+//setter
 void    RequestLine::setMethod(std::string& method)
 {
     method_ = method;
@@ -33,19 +50,4 @@ void    RequestLine::setVersion(std::string& version)
     if (version.rfind('\r') != std::string::npos)
         version.pop_back();
     version_ = version;
-}
-
-std::string&    RequestLine::getMethod(void)
-{
-    return (method_);
-}
-
-std::vector<std::string>    RequestLine::getRequestTarget(void)
-{
-    return (request_target_);
-}
-
-std::string&    RequestLine::getVersion(void)
-{
-    return (version_);
 }

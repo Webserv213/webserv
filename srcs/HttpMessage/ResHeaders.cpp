@@ -16,52 +16,7 @@ ResHeaders::~ResHeaders(void)
     
 }
 
-// setter
-void    ResHeaders::setServer(std::string server)
-{
-    server_ = server;
-}
-
-void    ResHeaders::setDate(std::string date)
-{
-    date_ = date;
-}
-
-void    ResHeaders::setContentType(std::string content_type)
-{
-    content_type_ = content_type;
-}
-
-void    ResHeaders::setLastModified(std::string last_modified)
-{
-    last_modified_ = last_modified;
-}
-
-void    ResHeaders::setTransferEncoding(std::string transfer_encoding)
-{
-    transfer_encoding_ = transfer_encoding;
-}
-
-void    ResHeaders::setConnection(std::string connection)
-{
-    connection_ = connection;
-}
-
-void    ResHeaders::setContentEncoding(std::string content_encoding)
-{
-    content_encoding_ = content_encoding;
-}
-
-void    ResHeaders::setContentLength(std::string content_length)
-{
-    content_length_ = content_length;
-}
-
-void    ResHeaders::setKeepAlive(std::string keep_alive)
-{
-    keep_alive_ = keep_alive;
-}
-
+//getter
 std::string&    ResHeaders::getServer(void)
 {
     return (server_);
@@ -105,4 +60,50 @@ std::string&    ResHeaders::getContentLength(void)
 std::string&    ResHeaders::getKeepAlive(void)
 {
     return (keep_alive_);
+}
+
+//setter
+void    ResHeaders::setServer(std::string server)
+{
+    server_ = server;
+}
+
+void    ResHeaders::setDate(std::string date)
+{
+    date_ = date;
+}
+
+void    ResHeaders::setContentType(std::string content_type)
+{
+    content_type_ = content_type;
+}
+
+void    ResHeaders::setLastModified(std::string last_modified)
+{
+    last_modified_ = last_modified;
+}
+
+void    ResHeaders::setTransferEncoding(std::string transfer_encoding)
+{
+    transfer_encoding_ = transfer_encoding;
+}
+
+void    ResHeaders::setConnection(std::string connection)
+{
+    connection_ = connection;
+}
+
+void    ResHeaders::setContentEncoding(std::string content_encoding)
+{
+    content_encoding_ = content_encoding;
+}
+
+void    ResHeaders::setContentLength(std::string content_length)
+{
+    content_length_ = content_length;
+}
+
+void    ResHeaders::setKeepAlive(std::string keep_alive)
+{
+    keep_alive_ = keep_alive;
 }

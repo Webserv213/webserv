@@ -16,112 +16,110 @@ enum    ChunkedFlag
 {
     CHUNKED_LENGTH,
     CHUNKED_DATA,
-    DONE_DATA,
-};
-
-enum PipeMode
-{
-    READ_PIPE,
-    WRITE_PIPE,
 };
 
 class EventRecorder
 {
 private:
-    int event_read_file_;
-    int event_write_res_;
-    int event_write_pipe_;
-    int event_write_file_;
-    int parent_client_fd_;
-    size_t  fd_error_;
-    int fd_content_index_;
-    int autoindex_;
-    int read_type_; // reading header or content-longth body or chunked body
-    int header_eof_; // cr - lf - cr -lf 가 연속으로 들어오는지 기록
-    int content_current_read_length_; //content lentth 길이
-    int chunked_eof_;   //chunked data의 끝 확인 플래그
-    int chunked_cr_lf_; // chunked data의 cr lf 확인 플래그
-    int chunked_data_type_;    // chunked data에서 길이인지 데이터인지 확인하는 플래그
-    int chunked_current_read_length_;
-    size_t chunked_total_read_length_;
-    std::string cgi_path_;
-    int cgi_status_;
-    int send_pipe_[2];
-    int Receive_pipe_[2];
-    int pipe_mode_;
-    std::string send_cgi_body_;
-    int write_body_idx_;
-    int remain_write_cgi_data_;
-    size_t chunked_begin_idx_;
-
     Request req_;
     Response res_;
+
+    bool event_read_file_;
+    bool event_write_res_;
+
+    bool header_crlf_; 
+    bool chunked_cr_lf_;
+    bool chunked_data_type_;
+
+    int parent_client_fd_;
+    int read_type_;
+
+    int send_pipe_[2];
+    int receive_pipe_[2];
+    int cgi_status_;
+
+    std::string cgi_path_;
+    std::string send_cgi_body_;
+    
+    size_t fd_content_index_;
+
+    size_t content_current_read_length_;
+
+    size_t chunked_begin_idx_;
+    size_t chunked_current_read_length_;
+    size_t chunked_total_read_length_;
+
+    size_t write_body_idx_;
 
 public:
     EventRecorder();
     EventRecorder(int parent_client_fd);
     ~EventRecorder();
 
-    void setRemainWriteCgiData(int n);
-    void setFdContentIndex(int n);
-    void setEventReadFile(int flag);
-    void setEventWriteRes(int flag);
-    void setEventWritePipe(int flag);
-    void setEventWriteFile(int flag);
-    void setParentClientFd(int fd);
-    void setFdError(int flag);
-    void setAutoindexFlag(int flag);
-    void setReadType(int read_type);
-    void setHeaderCrLf(int header_eof);
-    void setContentCurrentReadLength(int content_length_cnt);
-    void incContentCurrentReadLength(void);
-    void setChunkedEof(int chunked_eof);
-    void setChunkedCrLf(int chunked_cr_lf);
-    void setChunkedDataType(int chunked_data_type);
-    void setChunkedCurrentReadLength(size_t chunked_current_read_length);
-    void setChunkedTotalReadLength(size_t chunked_total_read_length);
+    //setter
     void setRequest(Request& req);
     void setResponse(Response& res);
+
+    void setEventReadFile(bool flag);
+    void setEventWriteRes(bool flag);
+
+    void setHeaderCrLf(bool flag);
+    void setChunkedCrLf(bool flag);
+    void setChunkedDataType(bool type);
+
+    void setParentClientFd(int fd);
+    void setReadType(int type);
+
     void setSendPipe(int idx, int fd);
     void setReceivePipe(int idx, int fd);
     void setCgiStatus(int status);
-    void setCgiPath(std::string path);
-    void setPipeMode(int pipe_mode);
-    void setSendCgiBody(const std::string& send_cgi_body);
-    void setWriteBodyIndex(int idx);
-    void sumWriteBodyIndex(int idx);
-    void setChunkedBeginIndex(size_t idx);
 
-    int getRemainWriteCgiData(void);
-    size_t getFdContentIndex(void);
-    int getEventReadFile(void);
-    int getEventWriteRes(void);
-    int getEventWritePipe(void);
-    int getEventWriteFile(void);
+    void setCgiPath(std::string path);
+    void setSendCgiBody(const std::string& body);
+
+    void setFdContentIndex(size_t idx);
+
+    void setContentCurrentReadLength(size_t length);
+    
+    void setChunkedBeginIndex(size_t idx);
+    void setChunkedCurrentReadLength(size_t length);
+    void setChunkedTotalReadLength(size_t length);
+
+    void setWriteBodyIndex(size_t idx);
+
+    //getter
+    Request& getRequest();
+    Response& getResponse();
+
+    bool getEventReadFile(void);
+    bool getEventWriteRes(void);
+
+    bool getHeaderCrLf(void);
+    bool getChunkedCrLf(void);
+    bool getChunkedDataType(void);
+
     int getParentClientFd(void);
-    int getFdError(void);
-    int getAutoindexFlag(void);
     int getReadType(void);
-    int getHeaderCrLf(void);
-    int getContentCurrentReadLength(void);
-    int getChunkedEof(void);
-    int getChunkedCrLf(void);
-    int getChunkedDataType(void);
-    size_t getChunkedCurrentReadLength(void);
-    size_t getChunkedTotalReadLength(void);
+
     int getSendPipe(int idx);
     int getReceivePipe(int idx);
     int getCgiStatus(void);
-    std::string getCgiPath(void);
-    int getPipeMode(void);
-    std::string& getSendCgiBody(void);
-    int getWriteBodyIndex(void);
-    size_t getChunkedBeginIndex();
 
-    // utils
-    void incChunkedCurrentReadLength(void);
-    Request& getRequest();
-    Response& getResponse();
+    std::string getCgiPath(void);
+    std::string& getSendCgiBody(void);
+
+    size_t getFdContentIndex(void);
+
+    size_t getContentCurrentReadLength(void);
+
+    size_t getChunkedBeginIndex();
+    size_t getChunkedCurrentReadLength(void);
+    size_t getChunkedTotalReadLength(void);
+
+    size_t getWriteBodyIndex(void);
+
+    //utils
+    void sumWriteBodyIndex(size_t idx);
 };
 
 #endif

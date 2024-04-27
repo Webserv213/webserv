@@ -2,9 +2,13 @@
 # define UTILS_HPP
 
 # include <iostream>
-# include <vector>
-# include <cctype> // isdigit, isalpha 함수 사용을 위함
+# include <string>
+# include <cctype>
+# include <fstream>
+# include <sstream>
 # include <unistd.h>
+# include <sys/stat.h>
+
 
 enum FileCheck
 {
@@ -19,14 +23,11 @@ enum AutoIndexCheck
 	OFF
 };
 
-std::string         getFileContents(std::string input_file_name);
-std::string         strTrim(std::string &str, char c);
-std::string         checkSemicolon(std::string &str);
-void                getlineSkipDelemeter(std::istringstream& stream_file_contents, std::string& buff, char c);
-std::string         mySubstr(std::string::iterator start, std::string::iterator end);
-int 				isFileOrDirectory(const char* path);
-int                 hexToDecimal(const char buf[], int size);
-void                reqPrint(char *buf, int n);
-bool                existMethod(std::string method, std::vector<std::string> accessMethod);
+std::string getFileContents(std::string input_file_name);
+std::string strTrim(std::string &str, char c);
+std::string checkSemicolon(std::string &str);
+void        getlineSkipDelemeter(std::istringstream& stream_file_contents, std::string& buff, char c);
+int         isFileOrDirectory(const char* path);
+int         hexToDecimal(const char buf[], int size);
 
 #endif

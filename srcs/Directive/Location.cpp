@@ -24,7 +24,6 @@ Location::~Location(void)
 
 }
 
-
 // getter
 std::vector<std::string> Location::getUrlPostfix()
 {
@@ -60,7 +59,6 @@ std::string Location::getCgiPath()
 {
     return (cgi_path_);
 }
-
 
 // setter
 void Location::setRoot(std::string &root)

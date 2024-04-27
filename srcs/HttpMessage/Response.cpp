@@ -9,6 +9,7 @@ Response::~Response(void)
     
 }
 
+//getter
 ResponseLine& Response::getStatusLine(void)
 {
     return (status_line_);
@@ -24,12 +25,14 @@ std::string& Response::getBody(void)
     return(body_);
 }
 
-void    Response::addBody(const std::string& body)
-{
-    body_.append(body);
-}
-
+//setter
 void    Response::setBody(const std::string& body)
 {
     body_ = body;
+}
+
+//utils
+void    Response::addBody(const std::string& body)
+{
+    body_.append(body);
 }
