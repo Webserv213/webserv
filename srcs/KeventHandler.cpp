@@ -263,26 +263,72 @@ int KeventHandler::getLocationIndex(Request req, Server &server, size_t *res_sam
     return (index);
 }
 
+// std::string KeventHandler::makeDirList(std::string file_path)
+// {
+//     DIR* dir = opendir(file_path.c_str());
+//     if (!dir) {
+//         // 디렉토리 열기 실패
+//         throw (std::runtime_error("Error: Unable to open directory."));
+//     }
+
+//     std::string result;
+
+//     struct dirent* entry;
+//     while ((entry = readdir(dir)) != NULL) {
+//         std::string name = entry->d_name;
+//         if (name != "." && name != "..") {
+//             result += name;
+//             result += "\n";
+//         }
+//     }
+//     closedir(dir);
+//     return (result);
+// }
+
+bool isDirectory(const std::string& path)
+{
+    struct stat stat_buf;
+    if (stat(path.c_str(), &stat_buf) != 0)
+    {
+        return false;
+    }
+    return S_ISDIR(stat_buf.st_mode);
+}
+
 std::string KeventHandler::makeDirList(std::string file_path)
 {
     DIR* dir = opendir(file_path.c_str());
     if (!dir) {
         // 디렉토리 열기 실패
-        throw (std::runtime_error("Error: Unable to open directory."));
+        throw std::runtime_error("Error: Unable to open directory.");
     }
 
-    std::string result;
+    std::string result = "<!DOCTYPE html>\n";
+    result += "<html>\n";
+    result += "<head>\n";
+    result += "<title>Directory Listing</title>\n";
+    result += "</head>\n";
+    result += "<body>\n";
+    result += "<h1>Directory Listing</h1>\n";
+    result += "<ul>\n";
 
     struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
         std::string name = entry->d_name;
         if (name != "." && name != "..") {
-            result += name;
-            result += "\n";
+            // Check if it's a file or directory
+            std::string path = file_path + "/" + name;
+            std::string type = (isDirectory(path)) ? "[DIR]" : "[FILE]";
+            result += "<li>" + type + " - " + name + "</li>\n";
         }
     }
+
+    result += "</ul>\n";
+    result += "</body>\n";
+    result += "</html>\n";
+    
     closedir(dir);
-    return (result);
+    return result;
 }
 
 bool KeventHandler::checkAccessMethod(std::string method, Location location)
