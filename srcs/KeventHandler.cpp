@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <cstdio>
 
 long long previous_time;
 
@@ -419,6 +420,20 @@ void KeventHandler::notFound404(int curr_event_fd)
     setReadFileEvent(curr_event_fd, fd);
 }
 
+void KeventHandler::forbidden403(int curr_event_fd)
+{
+    int fd;
+
+    fd = open("./var/www/error/error_403.html", O_RDONLY);
+    if (fd < 0)
+        throw (std::runtime_error("403 OPEN ERROR"));
+    fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("403");
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("Forbidden");
+
+    setReadFileEvent(curr_event_fd, fd);
+}
+
 // ========================================= post_utils =========================================
 
 void KeventHandler::createFileForPost(int curr_event_fd, std::string file_path)
@@ -623,8 +638,8 @@ void KeventHandler::methodGetHandler(Server &server, Request &req, int curr_even
 
 void    KeventHandler::methodDeleteHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size)
 {
-    int     fd;
-    bool    is_allow_method;
+    struct stat st;
+    bool        is_allow_method;
 
     is_allow_method = checkAccessMethod(req.getRequestLine().getMethod(), server.getLocationBlock(loc_idx));
     if (is_allow_method == true)
@@ -633,12 +648,67 @@ void    KeventHandler::methodDeleteHandler(Server &server, Request &req, int cur
 
         file_path = createFilePath(server, req, loc_idx, size);
         // file_path 있는지 확인해서 있으면 지우고, 없으면 -> 404
-        fd = open (file_path.c_str(), O_RDONLY);
-        if (fd < 0)
+        std::cout << "delete file path : " << file_path << "\n";
+        if (stat(file_path.c_str(), &st) != 0)
             notFound404(curr_event_fd);
         else
-            // 삭제
-            ;
+        {
+            if(std::remove(file_path.c_str()) == 0)
+            {
+                std::string version = fd_manager_[curr_event_fd].getRequest().getRequestLine().getVersion();
+
+                fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("200");
+                fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("OK");
+
+                fd_manager_[curr_event_fd].getResponse().getStatusLine().setVersion(version);
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setServer("default");
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setKeepAlive("timeout=100");
+
+                time_t rawTime;
+                time(&rawTime);
+
+                struct tm *timeInfo;
+                timeInfo = gmtime(&rawTime);
+
+                char buffer[80];
+                strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", timeInfo);
+
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setDate(buffer);
+
+                if (fd_manager_[curr_event_fd].getRequest().getRequestLine().getRequestTarget().size() != 0 && fd_manager_[curr_event_fd].getRequest().getRequestLine().getRequestTarget()[0] == "/favicon.ico")
+                    fd_manager_[curr_event_fd].getResponse().getHeaders().setContentType("image/x-icon");
+                else
+                    fd_manager_[curr_event_fd].getResponse().getHeaders().setContentType("text/html");
+
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setLastModified("default");
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setTransferEncoding("default");
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setConnection("keep-alive");
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setContentEncoding("default");
+
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setContentLength(std::to_string(fd_manager_[curr_event_fd].getResponse().getBody().size()));
+
+                std::string res_tmp;
+                res_tmp = "";
+                fd_manager_[curr_event_fd].getResponse().getStatusLine().setVersion("HTTP/1.1");
+                res_tmp += (fd_manager_[curr_event_fd].getResponse().getStatusLine().getVersion() + " ");
+                res_tmp += (fd_manager_[curr_event_fd].getResponse().getStatusLine().getStatusCode() + " ");
+                res_tmp += (fd_manager_[curr_event_fd].getResponse().getStatusLine().getStatusText() + "\r\n");
+                res_tmp += ("Date: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getDate() + "\r\n");
+                res_tmp += ("Content-Type: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getContentType() + "\r\n");
+                res_tmp += ("Content-Length: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getContentLength() + "\r\n");
+                res_tmp += ("Connection: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getConnection() + "\r\n");
+                res_tmp += ("Keep-Alive: " + fd_manager_[curr_event_fd].getResponse().getHeaders().getKeepAlive() + "\r\n");
+                res_tmp += "\r\n" + fd_manager_[curr_event_fd].getResponse().getBody();
+                fd_content_[curr_event_fd] = res_tmp;
+
+                fd_manager_[curr_event_fd].setEventWriteRes(1);
+                changeEvents(change_list_, curr_event_fd, EVFILT_WRITE, EV_ADD, 0, 0, &fd_manager_[curr_event_fd]);
+            }
+            else
+            {
+                forbidden403(curr_event_fd);
+            }
+        }
     }
     else
         notAllowedMethod405(curr_event_fd);
@@ -1168,7 +1238,7 @@ int KeventHandler::isPipeFile(struct kevent* curr_event)
 int KeventHandler::readFdFlag(struct kevent* curr_event)
 {
     char    buf[BUFFER_SIZE];
-    int     n = 0;
+    ssize_t n = 0;
 
     if (fd_content_.find(curr_event->ident) != fd_content_.end())
     {
@@ -1177,35 +1247,39 @@ int KeventHandler::readFdFlag(struct kevent* curr_event)
             return (CLOSE_CONNECTION);
         if (n < 0)
             return (READ_ERROR);
-        addContent(curr_event, &buf[0], n);
+        addContent(curr_event, buf, n);
         if (fd_manager_[curr_event->ident].getEventReadFile() == -1)
             return (addSegmentReqAndReadMode(curr_event));
         else
         {
-            if (fd_manager_[curr_event->ident].getCgiStatus() != READ_CGI)
+            if (fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
             {
-                return (READ_FINISH_FILE);
+                if (n == 0)
+                {
+                    struct timeval tv;
+                    gettimeofday(&tv, NULL);
+                    long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
+                    long long time_diff = milliseconds - previous_time;
+                    previous_time = milliseconds;
+                    std::cout << "CGI 파이프에 주고 받기 끝 (읽기쪽): " << time_diff << std::endl;
+
+                    fd_manager_[curr_event->ident].setCgiStatus(DONE_CGI);
+                    fd_manager_[curr_event->ident].getSendCgiBody().clear();
+
+                    return (READ_FINISH_REQUEST);
+                }
+                else
+                    return (isPipeFile(curr_event));
             }
-            if (n == 0 && fd_manager_[curr_event->ident].getCgiStatus() == READ_CGI)
+            else
             {
-                struct timeval tv;
-                gettimeofday(&tv, NULL);
-                long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;  // 초를 밀리초로 변환하고, 마이크로초를 밀리초로 변환
-                long long time_diff = milliseconds - previous_time;
-                previous_time = milliseconds;
-                std::cout << "CGI 파이프에 주고 받기 끝 (읽기쪽): " << time_diff << std::endl;
-
-                fd_manager_[curr_event->ident].setCgiStatus(DONE_CGI);
-                fd_manager_[curr_event->ident].getSendCgiBody().clear();
-
-                return (READ_FINISH_REQUEST);
+                if (n == curr_event->data)
+                    return (READ_FINISH_FILE);
+                else    
+                    return (IDLE);
             }
-            // std::cout << "isPipeFile\n";
-            return (isPipeFile(curr_event));
         }
     }
-    if (curr_event->flags & EV_EOF)
-        return (CLOSE_CONNECTION);
     return (IDLE);
 }
 
