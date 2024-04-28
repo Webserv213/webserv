@@ -35,7 +35,7 @@ int main(int argc, char **argv, char **env)
         else if (key == "SERVER_PROTOCOL")
             env_list.SERVER_PROTOCOL = value;
         else if (key == "PATH_INFO")
-            env_list.PATH_INFO = "./CLK/aa";
+            env_list.PATH_INFO = value;
         else if (key == "CONTENT_LENGTH")
             env_list.CONTENT_LENGTH = value;
 

@@ -308,17 +308,21 @@ size_t KeventHandler::getLocationIndex(Request &req, Server &server, size_t *res
     std::string cgi_file_extension;
     size_t size = 0;
 
-    // 확장자 검사
-    if (request_target.size() > 0 && request_target[request_target.size() - 1].rfind('.') != std::string::npos)
+    // 확장자 검사(가장 마지막 확장자를 확장자로)
+    for(int i = request_target.size() - 1; i >= 0; i--)
     {
-        size = request_target[request_target.size() - 1].rfind('.');
-        cgi_file_extension = request_target[request_target.size() - 1].substr(size);
+        if (request_target[i].rfind('.') != std::string::npos)
+        {
+            size = request_target[i].rfind('.');
+            cgi_file_extension = request_target[i].substr(size);
+            break ;
+        }
     }
 
+    // cgi가 아닌 경우는 알맞는 location 파싱
     for (size_t i = 1; i < server.getLocation().size(); i++)
     {
         same_path_cnt = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
-        // fd_manager_의 리퀘스트의 메소드 벡터 확인
         if (checkPostfix(req, server.getLocation()[i], cgi_file_extension))
         {
             *res_same_path_cnt = 1;
@@ -1183,12 +1187,27 @@ char** KeventHandler::createEnv(int parent_fd)
 
     std::string str0 = "REQUEST_METHOD=" + fd_manager_[parent_fd].getRequest().getRequestLine().getMethod();
     std::string str1 = "SERVER_PROTOCOL=" + fd_manager_[parent_fd].getRequest().getRequestLine().getVersion();
-    // cgi빼고 path_info에 넣어주기
-    for(size_t i = 0; i < fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size(); i++)
+    // create PATH_INFO
+    size_t i;
+
+    for(i = fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size() - 1; i >= 0; i--)
     {
-           ;
+        if (fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[i].rfind('.') != std::string::npos)
+        {
+            i++;
+            break ;
+        }
     }
-    std::string str2 = "PATH_INFO=/";
+    std::string str2 = "PATH_INFO=";
+    for(; i < fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size(); i++)
+    {
+        str2 += fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget()[i];
+        if (i != fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size() - 1)
+            str2 += "/";
+    }
+    if (str2 == "PATH_INFO=")
+        str2 += "/";
+
     std::string str3 = "CONTENT_LENGTH=" + std::to_string(fd_manager_[parent_fd].getRequest().getBody().size());
     std::string str4 = "HTTP_X_SECRET_HEADER_FOR_TEST=" + fd_manager_[parent_fd].getRequest().getHeaders().getXSecretHeaderForTest();
 
