@@ -1183,6 +1183,11 @@ char** KeventHandler::createEnv(int parent_fd)
 
     std::string str0 = "REQUEST_METHOD=" + fd_manager_[parent_fd].getRequest().getRequestLine().getMethod();
     std::string str1 = "SERVER_PROTOCOL=" + fd_manager_[parent_fd].getRequest().getRequestLine().getVersion();
+    // cgi빼고 path_info에 넣어주기
+    for(size_t i = 0; i < fd_manager_[parent_fd].getRequest().getRequestLine().getRequestTarget().size(); i++)
+    {
+           ;
+    }
     std::string str2 = "PATH_INFO=/";
     std::string str3 = "CONTENT_LENGTH=" + std::to_string(fd_manager_[parent_fd].getRequest().getBody().size());
     std::string str4 = "HTTP_X_SECRET_HEADER_FOR_TEST=" + fd_manager_[parent_fd].getRequest().getHeaders().getXSecretHeaderForTest();

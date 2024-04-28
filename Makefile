@@ -25,6 +25,8 @@ all : $(NAME)
 
 $(NAME) : $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME);
+	rm -rf ./CLK/cgi/upload.clk;
+	g++ ./CLK/cgi/upload.cpp -o ./CLK/cgi/upload.clk;
 
 clean :
 		rm -f $(OBJS);

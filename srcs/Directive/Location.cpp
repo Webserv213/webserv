@@ -92,6 +92,7 @@ void Location::setUrlPostfix(std::string  url_postfix)
             url_postfix_.push_back(buf);
     }
 }
+
 void Location::setAccessMethod(std::string  access_method)
 {
     access_method_.push_back(access_method);
