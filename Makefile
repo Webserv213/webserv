@@ -13,28 +13,32 @@ SRCS = main.cpp \
 		./srcs/Utils.cpp
 
 OBJS = $(SRCS:.cpp=.o)
-INCLUDE = -I ./include/Directive -I ./include/HttpMessage -I ./include
-NAME = webserv
-CXX = c++
-MYFLAGS = -std=c++98 -Wall -Wextra -Werror
-# MYFLAGS = -std=c++98 -Wall -Wextra -Werror -g -fsanitize=address
-CXXFLAGS = $(MYFLAGS) $(INCLUDE)
 
+NAME = webserv
+
+INCLUDE = -I ./include/Directive -I ./include/HttpMessage -I ./include
+MYFLAGS = -std=c++98 -Wall -Wextra -Werror
+
+UPLOAD_CGI_DIR = ./CLK/cgi/
+UPLOAD_CGI_SRC = upload.cpp
+UPLOAD_CGI_EXE = upload.clk
+
+CXX = c++
+CXXFLAGS = $(MYFLAGS) $(INCLUDE)
 
 all : $(NAME)
 
 $(NAME) : $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME);
-	rm -rf ./CLK/cgi/upload.clk;
-	g++ ./CLK/cgi/upload.cpp -o ./CLK/cgi/upload.clk;
+	$(CXX) $(MYFLAGS) $(UPLOAD_CGI_DIR)$(UPLOAD_CGI_SRC) -o $(UPLOAD_CGI_DIR)$(UPLOAD_CGI_EXE);
 
 clean :
-		rm -f $(OBJS);
+	rm -rf $(OBJS);
 
-fclean :
-		rm -f $(OBJS);
-		rm -f $(NAME);
+fclean : clean
+	rm -rf $(UPLOAD_CGI_DIR)/$(UPLOAD_CGI_EXE);
+	rm -rf $(NAME);
 
 re :
-		make fclean;
-		make all;
+	make fclean;
+	make all;

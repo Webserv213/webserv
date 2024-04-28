@@ -14,6 +14,7 @@ typedef struct info {
 
 int main(int argc, char **argv, char **env)
 {
+    (void)argv;
     env_struct env_list;
 
     if (argc != 2)
