@@ -31,7 +31,7 @@ private:
     bool chunked_cr_lf_;
     bool chunked_data_type_;
 
-    int parent_client_fd_;
+    int parent_fd_;
     int read_type_;
 
     int send_pipe_[2];
@@ -53,7 +53,7 @@ private:
 
 public:
     EventRecorder();
-    EventRecorder(int parent_client_fd);
+    EventRecorder(int parent_fd);
     ~EventRecorder();
 
     //setter
@@ -67,7 +67,7 @@ public:
     void setChunkedCrLf(bool flag);
     void setChunkedDataType(bool type);
 
-    void setParentClientFd(int fd);
+    void setParentFd(int fd);
     void setReadType(int type);
 
     void setSendPipe(int idx, int fd);
@@ -98,7 +98,7 @@ public:
     bool getChunkedCrLf(void);
     bool getChunkedDataType(void);
 
-    int getParentClientFd(void);
+    int getParentFd(void);
     int getReadType(void);
 
     int getSendPipe(int idx);

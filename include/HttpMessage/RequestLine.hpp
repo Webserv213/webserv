@@ -17,7 +17,7 @@ public :
 
     //getter
     std::string&                getMethod(void);
-    std::vector<std::string>    getRequestTarget(void);
+    std::vector<std::string>&    getRequestTarget(void);
     std::string&                getVersion(void);
 
     //setter

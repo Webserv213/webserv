@@ -9,7 +9,7 @@ EventRecorder::EventRecorder()
     chunked_cr_lf_ = 0;
     chunked_data_type_ = CHUNKED_LENGTH;
 
-    parent_client_fd_ = -1;
+    parent_fd_ = -1;
     read_type_ = READ_HEADER;
 
     fd_content_index_ = 0;
@@ -23,7 +23,7 @@ EventRecorder::EventRecorder()
     write_body_idx_ = 0;
 }
 
-EventRecorder::EventRecorder(int parent_client_fd)
+EventRecorder::EventRecorder(int parent_fd)
 {
     event_read_file_ = 0;
     event_write_res_ = 0;
@@ -32,7 +32,7 @@ EventRecorder::EventRecorder(int parent_client_fd)
     chunked_cr_lf_ = 0;
     chunked_data_type_ = CHUNKED_LENGTH;
 
-    parent_client_fd_ = parent_client_fd;
+    parent_fd_ = parent_fd;
     read_type_ = READ_HEADER;
 
     fd_content_index_ = 0;
@@ -87,9 +87,9 @@ void    EventRecorder::setChunkedDataType(bool type)
     chunked_data_type_ = type;
 }
 
-void EventRecorder::setParentClientFd(int fd)
+void EventRecorder::setParentFd(int fd)
 {
-    parent_client_fd_ = fd;
+    parent_fd_ = fd;
 }
 
 void EventRecorder::setReadType(int type)
@@ -188,9 +188,9 @@ bool EventRecorder::getChunkedDataType(void)
     return (chunked_data_type_);
 }
 
-int EventRecorder::getParentClientFd(void)
+int EventRecorder::getParentFd(void)
 {
-    return (parent_client_fd_);
+    return (parent_fd_);
 }
 
 int EventRecorder::getReadType(void)

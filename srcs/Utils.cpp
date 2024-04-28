@@ -99,3 +99,63 @@ int hexToDecimal(const char buf[], int size)
     }
     return result;
 }
+
+std::string num_to_string(int num)
+{
+    std::stringstream ss;
+    ss << num;
+    std::string str = ss.str();
+
+    return (str);
+}
+
+long long str_to_ll(const char* str)
+{
+    long long num = std::atol(str);
+
+    return (num);
+}
+
+bool isDirectory(const std::string& path)
+{
+    struct stat stat_buf;
+    if (stat(path.c_str(), &stat_buf) != 0)
+    {
+        return false;
+    }
+    return S_ISDIR(stat_buf.st_mode);
+}
+
+// 시작 시간을 설정하는 함수
+long long start_time_inspect(long long previous_time, std::string &test_syntax)
+{
+    struct timeval tv;
+
+    gettimeofday(&tv, NULL);
+    // sec를 ms로 변환하고, us를 ms로 변환
+    long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000; 
+    long long time_diff = milliseconds - previous_time;
+
+    previous_time = milliseconds;
+
+    std::cout << test_syntax << " Start Time : " << time_diff << std::endl;
+
+    return (previous_time);
+}
+
+// 시작 시간부터 종료 시간까지의 차이를 구하는 함수
+long long end_time_inspect(long long previous_time, std::string &test_syntax)
+{
+    struct timeval tv;
+
+    gettimeofday(&tv, NULL);
+    // sec를 ms로 변환하고, us를 ms로 변환
+    long long milliseconds = tv.tv_sec * 1000LL + tv.tv_usec / 1000;
+    long long time_diff = milliseconds - previous_time;
+
+    previous_time = milliseconds;
+    
+    std::cout << test_syntax << " End Time : " << time_diff << std::endl;
+
+    return (previous_time);
+}

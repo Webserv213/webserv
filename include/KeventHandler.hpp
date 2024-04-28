@@ -63,40 +63,38 @@ private:
     int     writeFdFlag(struct kevent* curr_event);
 
     // event
-    void    executeCgi(struct kevent* curr_event);
+    void    writeBodyToCgi(struct kevent* curr_event);
     void    socketError(struct kevent* curr_event);
     bool    createClientSocket(struct kevent* curr_event);
     void    clientReadError(struct kevent* curr_event);
-    void    executeMethod(int curr_event);
-    void    createResponse(unsigned int cur_fd);
-    void    sendResponse(unsigned int curr_event_fd, long write_able_buffer);
+    void    executeMethod(int curr_event_fd);
+    void    createResponse(int curr_event_fd);
+    void    sendResponse(int curr_event_fd, long writable_size);
     void    disconnectClient(int client_fd);
 
     // pipe read
-    int     isPipeFile(struct kevent* curr_event);
+    int     readBodyFromCgi(struct kevent* curr_event);
 
     // executeMethod utils
     int     transferFd(uintptr_t fd);
-    int     getServerIndex(Request req);
+    int     getServerIndex(Request &req);
 
     // location search
-    int     getLocationIndex(Request req, Server &server, size_t *size);
-    int     compareLocation(std::vector<std::string> t, std::vector<std::string> loc);
-    bool    checkCgi(Request req, Location loc, std::string extension);
+    size_t  getLocationIndex(Request &req, Server &server, size_t *size);
+    int     compareLocation(std::vector<std::string>& t, std::vector<std::string>& loc);
+    bool    checkPostfix(Request &req, Location &loc, std::string &extension);
 
     // method handler
     void    methodGetHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
-    void    methodPostHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
+    void    methodPostHandler(Server &server, Request &req, int curr_event_fd, int loc_idx);
     void    methodDeleteHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
 
     // method handler utils
-    bool        checkAccessMethod(std::string method, Location location);
+    bool        checkAccessMethod(std::string &method, Location &location);
     std::string createFilePath(Server &server, Request &req, int loc_idx, size_t size);
 
-
     // autoindex
-    std::string makeDirList(std::string file_path);
-    void        createResponseAutoindex(int curr_event_fd, std::string file_path);
+    std::string createDirecoryList(std::string& file_path);
 
     // request combine
     int     addSegmentReqAndReadMode(struct kevent* curr_event);
@@ -116,19 +114,20 @@ private:
     void    requestEntityTooLarge413(int curr_event_fd);
 
     // method get utils
+    bool    isFaviconReq(Request &req);
     void    getFaviconFile(int curr_event_fd);
     void    openFile(std::string file_path, int curr_event_fd);
-    bool    isCgiRequest(int cur_fd, int idx, int loc_idx);
-    bool    isRightMethod(Request &req, int cur_fd);
+    bool    isCgiRequest(int curr_event_fd, int idx, int loc_idx);
+    bool    isAvailableMethod(Request &req, int curr_event_fd);
 
     // cgi setting
-    char**  createEnv(int parent_fd);
+    char    **createEnv(int parent_fd);
     void    connectPipe(int parent_fd);
     void    closePipes(int parent_fd);
 
     // not use
-    void        createFile(struct kevent* curr_event);
-    void        createFileForPost(int curr_event_fd, std::string file_path);
+    void    createFile(struct kevent* curr_event);
+    void    createFileForPost(int curr_event_fd, std::string file_path);
 
 public:
     KeventHandler(Http &http);

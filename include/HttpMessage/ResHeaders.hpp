@@ -14,7 +14,6 @@ private:
     std::string connection_;
     std::string content_encoding_;
     std::string content_length_;
-    std::string keep_alive_;
 
 public:
     ResHeaders();
@@ -29,7 +28,6 @@ public:
     std::string&    getConnection(void);
     std::string&    getContentEncoding(void);
     std::string&    getContentLength(void);
-    std::string&    getKeepAlive(void);
 
     //setter
     void    setServer(std::string server);
@@ -40,7 +38,6 @@ public:
     void    setConnection(std::string connection);
     void    setContentEncoding(std::string content_encoding);
     void    setContentLength(std::string content_length);
-    void    setKeepAlive(std::string keep_alive);
 };
 
 #endif

@@ -57,11 +57,6 @@ std::string&    ResHeaders::getContentLength(void)
     return (content_length_);
 }
 
-std::string&    ResHeaders::getKeepAlive(void)
-{
-    return (keep_alive_);
-}
-
 //setter
 void    ResHeaders::setServer(std::string server)
 {
@@ -101,9 +96,4 @@ void    ResHeaders::setContentEncoding(std::string content_encoding)
 void    ResHeaders::setContentLength(std::string content_length)
 {
     content_length_ = content_length;
-}
-
-void    ResHeaders::setKeepAlive(std::string keep_alive)
-{
-    keep_alive_ = keep_alive;
 }

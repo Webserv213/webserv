@@ -17,7 +17,7 @@ std::string&    RequestLine::getMethod(void)
     return (method_);
 }
 
-std::vector<std::string>    RequestLine::getRequestTarget(void)
+std::vector<std::string>&   RequestLine::getRequestTarget(void)
 {
     return (request_target_);
 }

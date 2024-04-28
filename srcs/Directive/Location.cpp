@@ -25,22 +25,22 @@ Location::~Location(void)
 }
 
 // getter
-std::vector<std::string> Location::getUrlPostfix()
+std::vector<std::string>& Location::getUrlPostfix()
 {
     return (url_postfix_);
 }
 
-std::vector<std::string> Location::getAccessMethod()
+std::vector<std::string>& Location::getAccessMethod()
 {
     return (access_method_);
 }
 
-std::string Location::getRoot()
+std::string& Location::getRoot()
 {
     return (root_);
 }
 
-std::string Location::getIndex()
+std::string& Location::getIndex()
 {
     return (index_);
 }
@@ -55,7 +55,7 @@ long long Location::getClientMaxBodySize()
     return (client_max_body_size_);
 }
 
-std::string Location::getCgiPath()
+std::string& Location::getCgiPath()
 {
     return (cgi_path_);
 }

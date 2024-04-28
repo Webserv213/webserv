@@ -57,7 +57,7 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
         {
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
-            new_location.setClientMaxBodySize(std::atoll(buff.c_str()));
+            new_location.setClientMaxBodySize(str_to_ll(buff.c_str()));
         }
         else if (buff == "index")
         {
@@ -97,7 +97,7 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
 }
 
 // getter
-std::string Server::getRoot(void)
+std::string &Server::getRoot(void)
 {
     return (root_);
 }
@@ -112,7 +112,7 @@ long long Server::getClientMaxBodySize(void)
     return (client_max_body_size_);
 }
 
-std::string Server::getErrorPage(std::string error_code)
+std::string &Server::getErrorPage(std::string error_code)
 {
     return (error_page_[error_code]);
 }
@@ -122,22 +122,22 @@ unsigned short Server::getListenPort()
     return (listen_port_);
 }
 
-std::string Server::getServerName(void)
+std::string &Server::getServerName(void)
 {
     return (server_name_);
 }
 
-Location Server::getLocationBlock(int idx)
+Location &Server::getLocationBlock(int idx)
 {
     return (location_block_[idx]);
 }
 
-std::vector<Location> Server::getLocation(void)
+std::vector<Location> &Server::getLocation(void)
 {
     return (location_block_);
 }
 
-std::string Server::getIndex(void)
+std::string &Server::getIndex(void)
 {
     return (index_);
 }

@@ -25,13 +25,13 @@ public:
     ~Location();
 
     // getter
-    std::vector<std::string>    getUrlPostfix();
-    std::vector<std::string>    getAccessMethod();
-    std::string                 getRoot();
-    bool                        getAutoIndex();
+    std::vector<std::string>&   getUrlPostfix();
+    std::vector<std::string>&   getAccessMethod();
+    std::string&                getRoot();
+    std::string&                getIndex();
+    std::string&                getCgiPath();
     long long                   getClientMaxBodySize();
-    std::string                 getIndex();
-    std::string                 getCgiPath();
+    bool                        getAutoIndex();
 
     // setter
     void setRoot(std::string &root);

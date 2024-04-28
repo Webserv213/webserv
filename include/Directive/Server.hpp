@@ -28,15 +28,15 @@ public:
     ~Server();
 
     //getter
-    std::string getRoot();
+    std::string &getRoot();
     bool getAutoIndex();
     long long getClientMaxBodySize();
-    std::string getErrorPage(std::string error_code);
+    std::string &getErrorPage(std::string error_code);
     unsigned short getListenPort();
-    std::string getServerName();
-    Location getLocationBlock(int idx);
-    std::vector<Location> getLocation();
-    std::string getIndex();
+    std::string &getServerName();
+    Location &getLocationBlock(int idx);
+    std::vector<Location> &getLocation();
+    std::string &getIndex();
 
     //setter
     Location setLocationBlock(std::istringstream& stream_file_contents);
