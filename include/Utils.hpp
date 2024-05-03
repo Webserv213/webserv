@@ -34,5 +34,6 @@ int         hexToDecimal(const char buf[], int size);
 bool        isDirectory(const std::string& path);
 long long   start_time_inspect(long long previous_time, std::string &test_syntax);
 long long   end_time_inspect(long long previous_time, std::string &test_syntax);
+int         customHash(const std::string& str);
 
 #endif

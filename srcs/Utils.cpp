@@ -159,3 +159,17 @@ long long end_time_inspect(long long previous_time, std::string &test_syntax)
 
     return (previous_time);
 }
+
+int customHash(const std::string& str)
+{
+    int hash = rand();
+
+    for (size_t i = 0; i < str.length(); ++i)
+    {
+        hash = ((hash << 5) + hash) + str[i];
+    }
+
+    return (hash);
+}
+
+

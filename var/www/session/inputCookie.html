@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Name Form</title>
+</head>
+<body>
+    <form id="nameForm">
+        <label for="nameInput">이름:</label>
+        <input type="text" id="nameInput" name="name">
+        <button type="submit">제출</button>
+    </form>
+
+    <script>
+        document.getElementById("nameForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // 기본 제출 동작 막기
+
+            const name = document.getElementById("nameInput").value; // 이름 입력 값 가져오기
+
+            // POST 요청 보내기
+            fetch("http://localhost:8082/.session", {
+                method: "POST",
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.text()) // 응답 본문을 텍스트로 변환
+            // .then(html => {
+            //     // 응답으로 받은 HTML을 현재 페이지에 표시
+            //     document.body.innerHTML = html;
+            // })
+            .then(body => {
+                // 응답으로 받은 텍스트를 현재 페이지에 표시
+                document.body.innerHTML = body;
+            })
+            .catch(error => console.error("Error:", error));
+        });
+    </script>
+</body>
+</html>

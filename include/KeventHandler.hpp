@@ -38,6 +38,7 @@ private:
 
     std::map<int, EventRecorder>    fd_manager_;
     std::map<int, std::string>      fd_content_;
+    std::map<int, std::string>      cookies_;
 
     std::map<std::string, std::string>  mime_type_;
 
@@ -112,6 +113,9 @@ private:
     void    notFound404(int curr_event_fd);
     void    notAllowedMethod405(int curr_event_fd);
     void    requestEntityTooLarge413(int curr_event_fd);
+
+    // cookie
+    void inputCookieHTML(int curr_event_fd);
 
     // method get utils
     bool    isFaviconReq(Request &req);

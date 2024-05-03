@@ -12,6 +12,7 @@ ReqHeaders::ReqHeaders(void)
     listen_port_ = 0;
     upgrade_insecure_requests_ = "";
     user_agent_ = "";
+    cookie_ = "";
 }
 
 ReqHeaders::~ReqHeaders(void)
@@ -78,6 +79,11 @@ std::string ReqHeaders::getTransferEncoding()
 std::string ReqHeaders::getXSecretHeaderForTest()
 {
     return(x_secret_header_for_test_);
+}
+
+std::string ReqHeaders::getCookie()
+{
+    return (cookie_);
 }
 
 // setter
@@ -169,4 +175,9 @@ void    ReqHeaders::setTransferEncoding(std::string& transfer_encoding)
 void    ReqHeaders::setXSecretHeaderForTest(std::string& x_secret_header_for_test)
 {
     this->x_secret_header_for_test_ = x_secret_header_for_test;
+}
+
+void    ReqHeaders::setCookie(std::string cookie_id)
+{
+    cookie_ = cookie_id;
 }

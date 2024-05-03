@@ -14,6 +14,7 @@ private:
     std::string connection_;
     std::string content_encoding_;
     std::string content_length_;
+    std::string cookie_id_;
 
 public:
     ResHeaders();
@@ -28,6 +29,7 @@ public:
     std::string&    getConnection(void);
     std::string&    getContentEncoding(void);
     std::string&    getContentLength(void);
+    std::string&    getCookieId(void);
 
     //setter
     void    setServer(std::string server);
@@ -38,6 +40,7 @@ public:
     void    setConnection(std::string connection);
     void    setContentEncoding(std::string content_encoding);
     void    setContentLength(std::string content_length);
+    void    setCookieId(std::string cookie_id);
 };
 
 #endif

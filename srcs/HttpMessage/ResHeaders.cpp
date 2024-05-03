@@ -57,6 +57,11 @@ std::string&    ResHeaders::getContentLength(void)
     return (content_length_);
 }
 
+std::string&    ResHeaders::getCookieId(void)
+{
+    return (cookie_id_);
+}
+
 //setter
 void    ResHeaders::setServer(std::string server)
 {
@@ -96,4 +101,9 @@ void    ResHeaders::setContentEncoding(std::string content_encoding)
 void    ResHeaders::setContentLength(std::string content_length)
 {
     content_length_ = content_length;
+}
+
+void    ResHeaders::setCookieId(std::string cookie_id)
+{
+    cookie_id_ = cookie_id;
 }

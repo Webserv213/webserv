@@ -18,6 +18,7 @@ private:
     std::string     user_agent_;
     std::string     transfer_encoding_;
     std::string     x_secret_header_for_test_;
+    std::string     cookie_;
 
 public:
     ReqHeaders();
@@ -37,6 +38,7 @@ public:
     std::string     getUserAgent();
     std::string     getTransferEncoding();
     std::string     getXSecretHeaderForTest();
+    std::string     getCookie();
 
     //setter
     void    setContentLength(int& content_length);
@@ -50,7 +52,7 @@ public:
     void    setUserAgent(std::string& user_agent);
     void    setTransferEncoding(std::string& transfer_encoding);
     void    setXSecretHeaderForTest(std::string& x_secret_header_for_test);
-
+    void    setCookie(std::string cookie_id);
 
 };
 

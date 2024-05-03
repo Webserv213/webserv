@@ -297,6 +297,8 @@ bool KeventHandler::checkPostfix(Request &req, Location &loc, std::string &exten
 {
     if (loc.getUrlPostfix().size() == 1 && loc.getUrlPostfix()[0] == extension && req.getRequestLine().getMethod() == "POST")
         return (true);
+    else if (loc.getUrlPostfix().size() == 1 && loc.getUrlPostfix()[0] == extension && extension == ".session" && req.getRequestLine().getMethod() == "GET")
+        return (true);
     return (false);
 }
 
@@ -319,7 +321,7 @@ size_t KeventHandler::getLocationIndex(Request &req, Server &server, size_t *res
         }
     }
 
-    // cgi가 아닌 경우는 알맞는 location 파싱
+    //알맞는 location 파싱
     for (size_t i = 1; i < server.getLocation().size(); i++)
     {
         same_path_cnt = compareLocation(request_target, server.getLocation()[i].getUrlPostfix());
@@ -481,6 +483,36 @@ void KeventHandler::methodPostHandler(Server &server, Request &req, int curr_eve
             return ;
         }
     }
+
+    // /**
+    //  * cookie에 null 들어있으면
+    //  * session_id 생성하고, data 저장
+    //  * response의 set-cookie 헤더에 session_id 담아주기
+    // */
+
+    // time_t rawTime;
+    // time(&rawTime);
+    // struct tm *timeInfo;
+    // timeInfo = gmtime(&rawTime);
+    // char buffer[80];
+    // strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", timeInfo);
+
+    // if (fd_manager_[curr_event_fd].getRequest().getHeaders().getCookie() == "")
+    // {
+    //     int         session_id;
+    //     std::string cookie_id = "session_id=";
+
+    //     // session_id 생성
+    //     session_id = customHash(buffer);
+
+    //     // data 저장
+    //     cookies_[session_id] = fd_manager_[curr_event_fd].getRequest().getBody();
+
+    //     // response set-cookie 설정
+    //     cookie_id += num_to_string(session_id);
+    //     fd_manager_[curr_event_fd].getResponse().getHeaders().setCookieId(cookie_id);
+    // }
+
     if (is_allow_method == true)
         createResponse(curr_event_fd);
     else
@@ -611,6 +643,21 @@ void    KeventHandler::methodDeleteHandler(Server &server, Request &req, int cur
         notAllowedMethod405(curr_event_fd);
 }
 
+void KeventHandler::inputCookieHTML(int curr_event_fd)
+{
+    int fd;
+
+    fd = open ("./var/www/session/inputCookie.html", O_RDONLY);
+    if (fd < 0)   // fd 에러 처리하기
+        throw (std::runtime_error("inputCookie OPEN ERROR"));
+    fcntl(fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC);
+
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusCode("200");
+    fd_manager_[curr_event_fd].getResponse().getStatusLine().setStatusText("OK");
+
+    setReadFileEvent(curr_event_fd, fd);
+}
+
 bool    KeventHandler::isCgiRequest(int curr_event_fd, int idx, int loc_idx)
 {
     int send_fd[2];
@@ -619,6 +666,66 @@ bool    KeventHandler::isCgiRequest(int curr_event_fd, int idx, int loc_idx)
     if (fd_manager_[curr_event_fd].getCgiStatus() != DONE_CGI && http_.getServer()[idx].getLocationBlock(loc_idx).getCgiPath() != "")
     {
         fd_manager_[curr_event_fd].setSendCgiBody(fd_manager_[curr_event_fd].getRequest().getBody());
+        // session cgi인지 확인해서, cookie 있는지 없는지
+        if (http_.getServer()[idx].getLocationBlock(loc_idx).getCgiPath() == "./session/cgi_session")
+        {
+            if (fd_manager_[curr_event_fd].getRequest().getRequestLine().getMethod() == "POST")
+            {
+                // /**
+                //  * cookie에 null 들어있으면
+                //  * session_id 생성하고, data 저장
+                //  * response의 set-cookie 헤더에 session_id 담아주기
+                // */
+
+                time_t rawTime;
+                time(&rawTime);
+
+                struct tm *timeInfo;
+                timeInfo = gmtime(&rawTime);
+
+                char buffer[80];
+                strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", timeInfo);
+
+                int         session_id;
+                std::string cookie_id = "session_id=";
+
+                // session_id 생성
+                session_id = customHash(buffer);   // buffer에 날짜
+
+                // data 저장
+                cookies_[session_id] = fd_manager_[curr_event_fd].getRequest().getBody();
+
+                // response set-cookie 설정
+                cookie_id += num_to_string(session_id);
+                fd_manager_[curr_event_fd].getResponse().getHeaders().setCookieId(cookie_id);
+
+                fd_manager_[curr_event_fd].setSendCgiBody(cookies_[session_id]);
+            }
+            else if (fd_manager_[curr_event_fd].getRequest().getHeaders().getCookie() != "")  // cookie가 있는 경우
+            {
+                std::string session_id_str;
+
+                std::istringstream cookie_value(fd_manager_[curr_event_fd].getRequest().getHeaders().getCookie());
+                std::getline(cookie_value, session_id_str, '=');
+                std::getline(cookie_value, session_id_str);
+
+                int session_id_int;
+                char* endptr;
+                session_id_int = strtod(session_id_str.c_str(), &endptr);
+
+                std::string data = cookies_[session_id_int];
+                fd_manager_[curr_event_fd].setSendCgiBody(data);
+            }
+            else
+            {
+                // response에 html 입력창을 반환하도록 해줘야 함
+                inputCookieHTML(curr_event_fd);
+                
+                return (true);
+            }
+        }
+        /////
+
         fd_manager_[curr_event_fd].getRequest().setBody("");
 
         EventRecorder pipe_event_recorder(curr_event_fd);
@@ -769,7 +876,13 @@ void KeventHandler::createResponse(int curr_event_fd)
     fd_content_[parent_fd] += ("Content-Type: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentType() + "\r\n");
     fd_content_[parent_fd] += ("Content-Length: " + fd_manager_[parent_fd].getResponse().getHeaders().getContentLength() + "\r\n");
     fd_content_[parent_fd] += ("Connection: " + fd_manager_[parent_fd].getResponse().getHeaders().getConnection()+ "\r\n");
+
+    if (fd_manager_[parent_fd].getResponse().getHeaders().getCookieId() != "")
+        fd_content_[parent_fd] += ("Set-Cookie: " + fd_manager_[parent_fd].getResponse().getHeaders().getCookieId() + "\r\n");
+
     fd_content_[parent_fd] += "\r\n" + fd_manager_[parent_fd].getResponse().getBody();
+
+    // fd_manager_[parent_fd].getResponse().setBody("");
 
     if (parent_fd != curr_event_fd)
     {
@@ -843,6 +956,23 @@ void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)
 
         if (key == "Host:")
             req.getHeaders().setFullPath(value);
+        else if (key == "Cookie:")
+        {
+            // cookie에 저장된 session id 확인
+            req.getHeaders().setCookie(value);
+
+            // std::string session_id_str;
+
+            // std::istringstream cookie_value(value);
+            // std::getline(cookie_value, session_id_str, '=');
+            // std::getline(cookie_value, session_id_str);
+
+            // int session_id_int;
+            // char* endptr;
+            // session_id_int = strtod(session_id_str.c_str(), &endptr);
+
+            // printf("cookie 저장된 값: %s", cookies_[session_id_int].c_str());
+        }
         else if (key == "Accept:")
             req.getHeaders().setAccept(value);
         else if (key == "Accept-Encoding:")
@@ -875,6 +1005,7 @@ void    KeventHandler::parsingReqStartLineAndHeaders(struct kevent* curr_event)
     {
         fd_manager_[curr_event->ident].setReadType(NO_EXIST_BODY);
     }
+
 
     fd_manager_[curr_event->ident].setRequest(req);
 }
@@ -1037,15 +1168,20 @@ int KeventHandler::addSegmentReqAndReadMode(struct kevent* curr_event)
 
 std::string parsingCgiBody(const std::string& str)
 {
+    std::string body = "";
     std::string buf;
     std::istringstream streamLine(str);
 
     std::getline(streamLine, buf);
     std::getline(streamLine, buf);
     std::getline(streamLine, buf);
-    std::getline(streamLine, buf);
 
-    return (buf);
+    while (std::getline(streamLine, buf))
+    {
+        body += (buf + "\n");
+    }
+
+    return (body);
 }
 
 int KeventHandler::readBodyFromCgi(struct kevent* curr_event)
@@ -1056,6 +1192,7 @@ int KeventHandler::readBodyFromCgi(struct kevent* curr_event)
         event_recorder_test->getResponse().addBody(parsingCgiBody(fd_content_[curr_event->ident]));
     else
         event_recorder_test->getResponse().addBody(fd_content_[curr_event->ident]);
+
 
     fd_content_[curr_event->ident].clear();
 
@@ -1127,7 +1264,6 @@ int  KeventHandler::getEventFlag(struct kevent* curr_event)
 {
     if (curr_event->flags & EV_ERROR)
     {
-        std::cout << "EV_ERROR!\n";
         return (IDLE);
     }
     if (curr_event->filter == EVFILT_TIMER)

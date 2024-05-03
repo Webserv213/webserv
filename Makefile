@@ -23,6 +23,10 @@ UPLOAD_CGI_DIR = ./CLK/cgi/
 UPLOAD_CGI_SRC = upload.cpp
 UPLOAD_CGI_EXE = upload.clk
 
+SESSION_CGI_DIR = ./session/
+SESSION_CGI_SRC = session.cpp
+SESSION_CGI_EXE = cgi_session
+
 CXX = c++
 CXXFLAGS = $(MYFLAGS) $(INCLUDE)
 
@@ -31,6 +35,7 @@ all : $(NAME)
 $(NAME) : $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME);
 	$(CXX) $(MYFLAGS) $(UPLOAD_CGI_DIR)$(UPLOAD_CGI_SRC) -o $(UPLOAD_CGI_DIR)$(UPLOAD_CGI_EXE);
+	$(CXX) $(MYFLAGS) $(SESSION_CGI_DIR)$(SESSION_CGI_SRC) -o $(SESSION_CGI_DIR)$(SESSION_CGI_EXE);
 
 clean :
 	rm -rf $(OBJS);
