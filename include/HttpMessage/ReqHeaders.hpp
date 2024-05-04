@@ -52,8 +52,7 @@ public:
     void    setUserAgent(std::string& user_agent);
     void    setTransferEncoding(std::string& transfer_encoding);
     void    setXSecretHeaderForTest(std::string& x_secret_header_for_test);
-    void    setCookie(std::string cookie_id);
-
+    void    setCookie(std::string& cookie_id);
 };
 
 #endif

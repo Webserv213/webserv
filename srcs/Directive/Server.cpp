@@ -57,7 +57,7 @@ Location Server::setLocationBlock(std::istringstream& stream_file_contents)
         {
             getlineSkipDelemeter(stream_file_contents, buff, ' ');
             buff = checkSemicolon(buff);
-            new_location.setClientMaxBodySize(str_to_ll(buff.c_str()));
+            new_location.setClientMaxBodySize(strToLL(buff.c_str()));
         }
         else if (buff == "index")
         {

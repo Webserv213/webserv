@@ -177,7 +177,7 @@ void    ReqHeaders::setXSecretHeaderForTest(std::string& x_secret_header_for_tes
     this->x_secret_header_for_test_ = x_secret_header_for_test;
 }
 
-void    ReqHeaders::setCookie(std::string cookie_id)
+void    ReqHeaders::setCookie(std::string& cookie_id)
 {
     cookie_ = cookie_id;
 }

@@ -34,16 +34,16 @@ class KeventHandler
 {
 private:
     Http                    http_;
-    std::vector<uintptr_t>  server_sockets_;
+    std::vector<uintptr_t>  server_sockets_;        // 다중 서버 저장 벡터
 
-    std::map<int, EventRecorder>    fd_manager_;
-    std::map<int, std::string>      fd_content_;
-    std::map<int, std::string>      cookies_;
+    std::map<int, EventRecorder>    fd_manager_;    // FD 별 이벤트 관리 맵
+    std::map<int, std::string>      fd_content_;    // FD 별 컨텐트 저장 맵 
+    std::map<int, std::string>      cookies_;       // cookie 값 저장 맵
 
-    std::map<std::string, std::string>  mime_type_;
+    std::map<std::string, std::string>  mime_type_; // mime type 저장 맵
 
     struct kevent               event_list_[EVENT_LIST_SIZE];
-    std::vector<struct kevent>  change_list_;
+    std::vector<struct kevent>  change_list_;   // 이벤트 리스트 저장 벡터
 
     int kq_;
 
@@ -63,8 +63,13 @@ private:
     int     readFdFlag(struct kevent* curr_event);
     int     writeFdFlag(struct kevent* curr_event);
 
+    // parsing cgi_bla header
+    std::string parsingCgiBlaHeader(const std::string& str);
+    std::string parsingCgiSessionHeader(const std::string& str);
+    
     // event
     void    writeBodyToCgi(struct kevent* curr_event);
+    int     readBodyFromCgi(struct kevent* curr_event);
     void    socketError(struct kevent* curr_event);
     bool    createClientSocket(struct kevent* curr_event);
     void    clientReadError(struct kevent* curr_event);
@@ -73,17 +78,15 @@ private:
     void    sendResponse(int curr_event_fd, long writable_size);
     void    disconnectClient(int client_fd);
 
-    // pipe read
-    int     readBodyFromCgi(struct kevent* curr_event);
-
     // executeMethod utils
     int     transferFd(uintptr_t fd);
     int     getServerIndex(Request &req);
 
     // location search
-    size_t  getLocationIndex(Request &req, Server &server, size_t *size);
-    int     compareLocation(std::vector<std::string>& t, std::vector<std::string>& loc);
-    bool    checkPostfix(Request &req, Location &loc, std::string &extension);
+    std::string getExtension(std::vector<std::string>& request_target);
+    size_t      getLocationIndex(Request &req, Server &server, size_t *size);
+    int         compareLocation(std::vector<std::string>& t, std::vector<std::string>& loc);
+    bool        checkPostfix(Request &req, Location &loc, std::string &extension);
 
     // method handler
     void    methodGetHandler(Server &server, Request &req, int curr_event_fd, int loc_idx, size_t size);
@@ -95,6 +98,7 @@ private:
     std::string createFilePath(Server &server, Request &req, int loc_idx, size_t size);
 
     // autoindex
+    int         autoIndexStatus(Server &server, int loc_idx);
     std::string createDirecoryList(std::string& file_path);
 
     // request combine
@@ -114,9 +118,6 @@ private:
     void    notAllowedMethod405(int curr_event_fd);
     void    requestEntityTooLarge413(int curr_event_fd);
 
-    // cookie
-    void inputCookieHTML(int curr_event_fd);
-
     // method get utils
     bool    isFaviconReq(Request &req);
     void    getFaviconFile(int curr_event_fd);
@@ -129,9 +130,8 @@ private:
     void    connectPipe(int parent_fd);
     void    closePipes(int parent_fd);
 
-    // not use
-    void    createFile(struct kevent* curr_event);
-    void    createFileForPost(int curr_event_fd, std::string file_path);
+    // cookie
+    void    inputCookieHTML(int curr_event_fd);
 
 public:
     KeventHandler(Http &http);

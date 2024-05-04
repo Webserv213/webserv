@@ -100,7 +100,7 @@ int hexToDecimal(const char buf[], int size)
     return result;
 }
 
-std::string num_to_string(int num)
+std::string numToString(int num)
 {
     std::stringstream ss;
     ss << num;
@@ -109,7 +109,7 @@ std::string num_to_string(int num)
     return (str);
 }
 
-long long str_to_ll(const char* str)
+long long strToLL(const char* str)
 {
     long long num = std::atol(str);
 
@@ -127,7 +127,7 @@ bool isDirectory(const std::string& path)
 }
 
 // 시작 시간을 설정하는 함수
-long long start_time_inspect(long long previous_time, std::string &test_syntax)
+long long inspectStartTime(long long previous_time, std::string &test_syntax)
 {
     struct timeval tv;
 
@@ -144,7 +144,7 @@ long long start_time_inspect(long long previous_time, std::string &test_syntax)
 }
 
 // 시작 시간부터 종료 시간까지의 차이를 구하는 함수
-long long end_time_inspect(long long previous_time, std::string &test_syntax)
+long long inspectEndTime(long long previous_time, std::string &test_syntax)
 {
     struct timeval tv;
 
@@ -171,5 +171,3 @@ int customHash(const std::string& str)
 
     return (hash);
 }
-
-
