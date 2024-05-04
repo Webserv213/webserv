@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -28,4 +28,70 @@
         <p>Commercial support is available at <a href="http://nginx.com/">nginx.com</a>.</p>
     </div>
 </body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WEBSERV</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .icon-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .icon {
+            width: 100px;
+            height: 100px;
+            background-color: #f0e68c;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 48px;
+            margin: 0 20px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .icon:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="icon-container">
+        <div class="icon" id="icon1">🏠</div>
+        <div class="icon" id="icon2">✍️</div>
+        <div class="icon" id="icon3">🐶</div>
+    </div>
+    
+    <script>
+        document.getElementById("icon1").addEventListener("click", function() {
+            window.location.href = "http://localhost:8082/";
+        });
+    
+        document.getElementById("icon2").addEventListener("click", function() {
+            window.location.href = "http://localhost:8082/.session";
+        });
+    
+        document.getElementById("icon3").addEventListener("click", function() {
+            window.location.href = "URL_3";
+        });
+    </script>
+</body>
 </html>
+

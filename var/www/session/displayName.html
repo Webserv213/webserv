@@ -1,30 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>이름 표시</title>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f0f0f0;
-        text-align: center;
-    }
-    .name-container {
-        margin-top: 100px;
-    }
-    .name {
-        font-size: 36px;
-        color: #333;
-        text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2);
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cookie</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .content-container {
+            text-align: center;
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .name {
+            font-size: 24px;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
-
-<div class="name-container">
-    <h1 class="name">{$name}</h1>
-</div>
-
+    <div class="content-container">
+        <div class="icon">🍪</div>
+        <div class="name">{$name}</div>
+        </br>
+        <a href="/">Home</a>
+    </div>
 </body>
 </html>
