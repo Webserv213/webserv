@@ -3,29 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>413 error</title>
+    <title>413 Content Too Large</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
             margin: 0;
             padding: 0;
-            background-color: #f0f0f0;
-            text-align: center;
-        }
-        .container {
-            margin-top: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
         }
         h1 {
+            font-size: 48px;
             color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        img {
+            width: 300px;
+            height: auto;
+            border-radius: 50%;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>413 method not allowed.</h1>
-        <p>If you see this page, the nginx web server is successfully installed and working. Further configuration is required.</p>
-        <p>For online documentation and support please refer to <a href="http://nginx.org/">nginx.org</a>.</p>
-        <p>Commercial support is available at <a href="http://nginx.com/">nginx.com</a>.</p>
-    </div>
+    <img src="/pic/IMG_0161.jpg" alt="귀여운 고양이">
+    <h1>413 Content Too Large</h1>
+    <p>Request Entity Too Large</p>
+    <a href="/">Home</a>
 </body>
 </html>
