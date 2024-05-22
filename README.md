@@ -129,8 +129,8 @@
 
 ## 참고 자료
 
-- [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
 - [HTTP/1.1: Protocol Specification (RFC2616)](https://tools.ietf.org/html/rfc2616)
+- [The Common Gateway Interface (CGI) Version 1.1 (RFC3875)](https://datatracker.ietf.org/doc/html/rfc3875)
 
 ## 프로젝트 멤버
 
