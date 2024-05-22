@@ -6,3 +6,4 @@
 - function naming은 lower camel case로 한다.
 - 하나의 파일엔 하나의 클래스만 작성한다.
 - 클래스멤버변수 : 변수끝에 underscore 붙인다.
+- test
