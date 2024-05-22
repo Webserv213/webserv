@@ -1,3 +1,6 @@
+# Webserv
+C++98 버전과 Unix Kqueue를 사용한 Web Server.
+
 웹서빙팀 <code convetion>
 *google c++ 참고 https://google.github.io/styleguide/cppguide.html#Variable_Names
 - 기본적으로 Google의 code convention을 따름. 추가로 ecole42의 orthdox rule도 적용
