@@ -49,25 +49,6 @@
 
 5. 웹 브라우저를 열고 `http://localhost:8082`에 접속합니다. (Port 번호는 config file에 따라 달라질 수 있습니다.)
 
-## 프로젝트 구조
-
-    http-server/
-    ├── src/
-    │   ├── main.cpp
-    │   ├── server.cpp
-    │   ├── request_handler.cpp
-    │   └── ...
-    ├── include/
-    │   ├── server.h
-    │   ├── request_handler.h
-    │   └── ...
-    ├── public/
-    │   ├── index.html
-    │   ├── styles.css
-    │   └── ...
-    ├── Makefile
-    └── README.md
-
 ## 설정 파일 예시
 
 - 다음은 이 웹서버를 설정할 때 사용한 기본 config file의 예시입니다.
