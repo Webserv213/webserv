@@ -127,6 +127,10 @@
 - CGI 요청 처리
 - 간단한 파일 입출력 및 예외 처리
 
+## Diagram
+- https://drive.google.com/file/d/11UmG6pbXM9xsuBHdFH4aXS_DtuiRP56v/view?usp=sharing
+![webserv drawio diagram](https://github.com/Webserv213/webserv/assets/106380619/541fabb9-7893-419b-9249-6cee6be0ac7b)
+
 ## 클래스 설명
 
 ### HTTP
