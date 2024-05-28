@@ -127,6 +127,10 @@
 - CGI 요청 처리
 - 간단한 파일 입출력 및 예외 처리
 
+## 클래스 설명
+
+### HTTP 클래스
+
 ## 참고 자료
 
 - [HTTP/1.1: Protocol Specification (RFC2616)](https://tools.ietf.org/html/rfc2616)
@@ -137,7 +141,7 @@
 - 이수하, 최서지, 김우성
 
 ## Code convention
-- 기본적으로 Google의 Code convention을 따름. <https://google.github.io/styleguide/cppguide.html#Variable_Names> 
+- 기본적으로 Google의 Code convention을 따른다. <https://google.github.io/styleguide/cppguide.html#Variable_Names> 
 - 소스 파일명은 upper camel case로 한다.
 - 변수명은 snake case로 한다.
 - 함수명은 lower camel case로 한다.
