@@ -157,7 +157,7 @@
 - HTTP Response의 Headers 정보를 관리하는 클래스 (Date, Content-Type 등)
 
 ### EventRecorder
-- File Discriptor의 여러가지 상태값을 관리하기 위한 클래스 (flag, count 등)
+- File Discriptor의 여러가지 상태값을 관리하기 위한 클래스 (flag, count 등)
 
 ### KeventHandler
 - 맵 컨테이너를 활용해 각 File Discriptor 별로 EventRecorder 클래스를 관리하고 Event에 대한 처리를 담당하는 클래스
