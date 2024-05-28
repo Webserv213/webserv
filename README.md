@@ -151,7 +151,7 @@
 - HTTP Response의 Status Line, Headers, Body 정보를 관리하는 클래스
 
 ### ResponseLine
--  HTTP Response의 Status Line 부분의 정보를 관리하는 클래스 (HTTP 버전, 상태코드, 상태 텍스트)
+- HTTP Response의 Status Line 부분의 정보를 관리하는 클래스 (HTTP 버전, 상태코드, 상태 텍스트)
 
 ### ResHeaders
 - HTTP Response의 Headers 정보를 관리하는 클래스 (Date, Content-Type 등)
