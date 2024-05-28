@@ -129,7 +129,38 @@
 
 ## 클래스 설명
 
-### HTTP 클래스
+### HTTP
+- 설정 파일 호출 및 Http 블록을 파싱하고 Server 블록을 벡터 컨테이너로 관리하는 클래스
+
+### Server
+- Server 블록의 정보를 파싱하고 Location 블록을 벡터 컨테이너로 관리하는 클래스
+
+### Location
+- Server 블록 내 Location 블록의 정보를 관리하는 클래스
+
+### Request
+- HTTP Request의 Start Line, Headers, Body 정보를 관리하는 클래스
+
+### RequestLine
+- HTTP Request의 Start Line 정보를 관리하는 클래스 (요청 메소드, 경로, HTTP 버전)
+
+### ReqHeaders
+- HTTP Request의 Headers 정보를 관리하는 클래스 (Content-Length, Transfer-Encoding 등)
+
+### Response
+- HTTP Response의 Status Line, Headers, Body 정보를 관리하는 클래스
+
+### ResponseLine
+-  HTTP Response의 Status Line 부분의 정보를 관리하는 클래스 (HTTP 버전, 상태코드, 상태 텍스트)
+
+### ResHeaders
+- HTTP Response의 Headers 정보를 관리하는 클래스 (Date, Content-Type 등)
+
+### EventRecorder
+- File Discriptor의 여러가지 상태값을 관리하기 위한 클래스 (flag, count 등)
+
+### KeventHandler
+- 맵 컨테이너를 활용해 각 File Discriptor 별로 EventRecorder 클래스를 관리하고 Event에 대한 처리를 담당하는 클래스
 
 ## 참고 자료
 
