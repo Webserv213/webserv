@@ -128,7 +128,7 @@
 - 간단한 파일 입출력 및 예외 처리
 
 ## Diagram
-![webserv drawio diagram](https://github.com/Webserv213/webserv/assets/106380619/541fabb9-7893-419b-9249-6cee6be0ac7b)
+![webserv drawio](https://github.com/Webserv213/webserv/assets/106380619/b68c305c-3a8c-4747-bd59-0529a3bb8591)
 
 - https://drive.google.com/file/d/11UmG6pbXM9xsuBHdFH4aXS_DtuiRP56v/view?usp=sharing
 
